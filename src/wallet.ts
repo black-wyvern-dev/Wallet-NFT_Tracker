@@ -1,10 +1,13 @@
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { AccountInfo, Connection, PublicKey } from "@solana/web3.js";
 import * as borsh from 'borsh';
+import fs from 'fs';
+import path from 'path';
 import axios from 'axios';
 import { AccountAndPubkey, Metadata, METADATA_SCHEMA } from "./types";
 
 const SOLANA_MAINNET = "https://api.mainnet-beta.solana.com";
+const DUMP_PATH = __dirname + '/../dumps';
 const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
   'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s',
 );
@@ -62,6 +65,10 @@ export const fetchWalletForNFTs = async (address: string) => {
                         transactions: trxData,
                     })
                     console.log(nftAccounts[nftAccounts.length - 1]);
+                    saveDump(
+                        '1.json',
+                        nftAccounts[nftAccounts.length - 1]
+                    );
                     console.log(`\n--> ${nftAccounts.length} Nft is processed`);
             }
         }
@@ -201,4 +208,35 @@ async function getProgramAccounts(
   async function decodeMetadata(buffer: any) {
     return borsh.deserializeUnchecked(METADATA_SCHEMA, Metadata, buffer);
   }
+
+  export function saveDump(
+    dumpType: string,
+    content: any,
+    cPath: string = DUMP_PATH,
+    infos: any = {},
+  ) {
+    fs.writeFileSync(
+      getDumpPath(dumpType, cPath, infos),
+      JSON.stringify(content),
+    );
+  }
   
+  /**
+   * Resolve dump file path from dumpType
+   * 
+   * @param dumpType Type of dump which is used to resolve dump file name
+   * @param cPath Location of saved dump file
+   * @param infos Optional param for track transactions. Save period info in the dump file name
+   * @returns Location of subdirectory of exact dump file
+   */
+  export function getDumpPath(
+    dumpType: string,
+    cPath: string = DUMP_PATH,
+    infos: any = {},
+  ) {
+    if (!fs.existsSync(cPath)) fs.mkdirSync(cPath, {recursive: true});
+    switch (dumpType) {
+      default:
+        return path.join(cPath, dumpType);
+    }
+  }
