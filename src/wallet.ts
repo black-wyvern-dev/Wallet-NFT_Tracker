@@ -66,7 +66,7 @@ export const fetchWalletForNFTs = async (address: string) => {
                     })
                     console.log(nftAccounts[nftAccounts.length - 1]);
                     saveDump(
-                        '1.json',
+                        `${nftAccounts.length}.json`,
                         nftAccounts[nftAccounts.length - 1]
                     );
                     console.log(`\n--> ${nftAccounts.length} Nft is processed`);

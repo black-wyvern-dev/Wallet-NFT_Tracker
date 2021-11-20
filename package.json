@@ -2,11 +2,11 @@
   "name": "solana-nft-tracking",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/app.js",
+  "main": "dist/server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "ts-node": "ts-node",
-    "start": "tsc && nodemon src/server.ts"
+    "start": "tsc && nodemon --ignore dumps/ dist/server.js"
   },
   "author": "blackwyverndev",
   "license": "MIT",
