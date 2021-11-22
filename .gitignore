@@ -35,5 +35,5 @@ yarn-error.log*
 .vscode/
 
 # dump
-dumps/
+dumps/*
 dist/
