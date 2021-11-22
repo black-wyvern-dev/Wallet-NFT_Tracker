@@ -73,67 +73,87 @@ export const fetchWalletForNFTs = async (address: string) => {
     // }
 }
 
-export async function getTransactionData(address: string, mint: string) {
+export async function getTransactionData(address: string, mint: string | undefined) {
     const connection = new Connection(SOLANA_MAINNET, "confirmed");
-    let dump = loadDump(`${mint}.json`);
-    if (!dump) {
-      console.log('Couldn\'t find nft metadata. Fetch NFTs and try again.');
-      return false;
-    }
-    
-    let fetchedNFTMetadata = undefined;
-    for (let again = 0; /*again < 3*/; again++) {
+    let dumpName = '', dumpList = [] as any, result = [];
+    if ( mint == undefined ) {
+      dumpList = fs.readdirSync(DUMP_PATH);
+      if (dumpList.length == 0) return undefined;
+    } else dumpName = mint;
+    for (let dumpId = 0; mint != undefined || dumpId < dumpList.length; dumpId++) {
+      if (mint == undefined) dumpName = dumpList[dumpId];
+      else dumpName = `${dumpName}.json`;
+      let dump = loadDump(dumpName);
+      if (!dump) {
+        console.log('Couldn\'t find nft metadata. Fetch NFTs and try again.');
+        return false;
+      }
+      
+      let fetchedNFTMetadata = undefined;
+      for (let again = 0; again < 5; again++) {
+          try {
+              if (!dump.metadata.data.uri) break;
+              console.log(dump.metadata.data.uri);
+              const nftMetaData = await axios.get(dump.metadata.data.uri);
+              if (nftMetaData.status == 200) {
+                  fetchedNFTMetadata = nftMetaData.data;
+                  break;
+              };
+          } catch (e) {
+              console.log(`Metadata fetch from arweave is failed. Trying again`);
+          }
+      }
+      if (!fetchedNFTMetadata && !dump.metadata.data.uri) {
+        console.log('Could\'t get NFT metadata. Fetch Nft again and then try again.');
+        return false;
+      }
+      console.log('Get token nft metadata processed');
+      
+      let trxTracks = [] as any;
+      while (1) {
         try {
-            if (!dump.metadata.data.uri) break;
-            const nftMetaData = await axios.get(dump.metadata.data.uri);
-            if (nftMetaData.status == 200) {
-                fetchedNFTMetadata = nftMetaData.data;
-                break;
-            };
+          const result = await connection.getSignaturesForAddress(new PublicKey(dumpName.split('.')[0]), {limit: 100}, 'confirmed');
+          trxTracks = result;
+          console.log('--> Fetched related signature for address');
+          break;
         } catch (e) {
-            console.log(`Metadata fetch from arweave is failed. Trying again`);
-        }
+          console.log(`--> Error while fetch signatures: ${e}`);
+        };
+      };
+      // console.dir(trxTracks, {depth: null});
+      let trxData = [] as any, purchasedDate = '', purchasedPrice = 0;
+      for( let idx = 0; idx < trxTracks.length; idx ++ ) {
+          const time = (trxTracks[idx].blockTime ?? 0) * 1000;
+          let date = new Date();
+          date.setTime(time);
+          if (purchasedDate == '') purchasedDate = date.toLocaleString();
+          trxData.push({
+              signature: trxTracks[idx].signature,
+              slot: trxTracks[idx].slot,
+              blockTime: date.toLocaleString(),
+          })
+          // if (idx == 0 || idx == trxTracks.length - 1) {
+            const result = await getPriceInfo(trxTracks[idx].signature, address, connection);
+            const price = result == false ? 0 : result;
+            if (purchasedPrice == 0 || purchasedPrice < price) purchasedPrice = price;
+          // }
+      };
+      console.log(`--> Get purchased Price: ${purchasedPrice}`);
+      saveDump(dumpName, {
+        ...dump,
+        nftMetadata: fetchedNFTMetadata,
+        purchasedDate,
+        purchasedPrice,
+        transactionData: trxData,
+      });
+      result.push({
+        purchasedPrice,
+        purchasedDate,
+        data: trxData
+      });
     }
-    if (!fetchedNFTMetadata) {
-      console.log('Could\'t get NFT metadata. Fetch Nft again and then try again.');
-      return false;
-    }
-    console.log('Get token nft metadata processed');
     
-
-    const trxTracks = await connection.getSignaturesForAddress(new PublicKey(mint), {limit: 100}, 'confirmed');
-    console.log('--> Fetched related signature for address');
-    // console.dir(trxTracks, {depth: null});
-    let trxData = [] as any, purchasedDate = '', purchasedPrice = 0;
-    for( let idx = 0; idx < trxTracks.length; idx ++ ) {
-        const time = (trxTracks[idx].blockTime ?? 0) * 1000;
-        let date = new Date();
-        date.setTime(time);
-        if (purchasedDate == '') purchasedDate = date.toLocaleString();
-        trxData.push({
-            signature: trxTracks[idx].signature,
-            slot: trxTracks[idx].slot,
-            blockTime: date.toLocaleString(),
-        })
-        if (idx == 0 || idx == trxTracks.length - 1) {
-          const result = await getPriceInfo(trxTracks[idx].signature, address, connection);
-          purchasedPrice = result == false ? 0 : result;
-        }
-    };
-
-    saveDump(`${mint}.json`, {
-      ...dump,
-      nftMetadata: fetchedNFTMetadata,
-      purchasedDate,
-      purchasedPrice,
-      transactionData: trxData,
-    });
-    
-    return {
-      purchasedPrice,
-      purchasedDate,
-      data: trxData
-    };
+    return result;
 }
 
 // Get Purchase Price from signature
@@ -166,7 +186,7 @@ const getPriceInfo = async (sig: string, wallet: string, connection: Connection)
         price += data.lamports;
     // console.dir(transaferData, {depth: null});
     console.log(`--> Parsed price: ${purchaser} - ${price / DEFAULT_SOL}`);
-    return price;
+    return price / DEFAULT_SOL;
 }
 
 // Convert all PublicKeys in the transactions data as base58 string
