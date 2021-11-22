@@ -4,6 +4,7 @@ import { fetchWalletForNFTs, getTransactionData } from './wallet';
 const app = express();
 const port = 3000;
 
+// Router - determine all nfts on the wallet and get full data
 app.get('/', async (req, res) => {
   try {
     const address = req.query.address as string;//'9X3n2WPj8k7GB2wD7MxSxuL3VqC2e6YaafdcyPbr8xys';//
@@ -20,6 +21,7 @@ app.get('/', async (req, res) => {
   }
 });
 
+// Router - fetch full data for individual nft on the wallet
 app.get('/nft', async (req, res) => {
   try {
     const address = req.query.address as string;//'9X3n2WPj8k7GB2wD7MxSxuL3VqC2e6YaafdcyPbr8xys';

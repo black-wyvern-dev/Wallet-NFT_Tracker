@@ -13,76 +13,95 @@ const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
   'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s',
 );
 
+/**
+ * Determine NFTs on wallet
+ * 
+ * Fetch only metadata for each NFT. Price and related transaction info is excepted
+ * @param address Wallet address to determine
+ * @returns Fetched NFT Accounts with data
+ */
 export const fetchWalletForNFTs = async (address: string) => {
-    // try {
-        const wallet = new PublicKey(address);
-        const connection = new Connection(SOLANA_MAINNET, "confirmed");
+    const wallet = new PublicKey(address);
+    const connection = new Connection(SOLANA_MAINNET, "confirmed");
 
-        // Retrieve spl-tokens in wallet
-        const ownedTokens = await connection.getParsedTokenAccountsByOwner(wallet, {
-            programId: TOKEN_PROGRAM_ID,
-        });
+    // Retrieve spl-tokens in wallet
+    const ownedTokens = await connection.getParsedTokenAccountsByOwner(wallet, {
+        programId: TOKEN_PROGRAM_ID,
+    });
 
-        let nftAccounts = [] as any;
-        for ( const token of ownedTokens.value ) {
+    let nftAccounts = [] as any;
+    for ( const token of ownedTokens.value ) {
 
-            // Convert BN type public keys to string
-            let parsedToken = {
-                account: {
-                    ...token.account,
-                    owner: token.account.owner.toBase58(),
-                },
-                pubkey: token.pubkey.toBase58(),
-            }
-            const parsedData = parsedToken.account.data.parsed;
-            // Process only nfts
-            if ( parsedData.info.tokenAmount.decimals == 0
-                && parsedData.info.tokenAmount.uiAmount == 1 ) {
-                    // console.dir(parsedToken, {depth: null});
-                    console.log(`--> ${nftAccounts.length + 1} nft is determinted`);
-                    const metaData = await getAccountsByMint(parsedData.info.mint, connection);
-                    console.log('Get token metadata performed');
-                    let parsedMetaData = {} as any;
-                    if ( metaData.length != 0 ) {
-                        parsedMetaData = processMetaData(metaData[0][0]);
-                    } 
-                    console.log('Process token metadata performed');
-                    // console.dir(parsedMetaData, {depth: null});
-                    
-                    nftAccounts.push({
-                        account: token.pubkey.toBase58(),
-                        mint: parsedData.info.mint,
-                        metadataAccount: metaData[0][1],
-                        metadata: parsedMetaData,
-                        // nftMetadata: fetchedNFTMetadata,
-                    })
-                    console.log(nftAccounts[nftAccounts.length - 1]);
-                    saveDump(
-                        `${parsedData.info.mint}.json`,
-                        nftAccounts[nftAccounts.length - 1]
-                    );
-                    console.log(`\n--> ${nftAccounts.length} Nft is processed`);
-            }
+        // Convert BN type public keys to string
+        let parsedToken = {
+            account: {
+                ...token.account,
+                owner: token.account.owner.toBase58(),
+            },
+            pubkey: token.pubkey.toBase58(),
         }
-        console.log(`\n${nftAccounts.length} nfts determined from this wallet`);
+        const parsedData = parsedToken.account.data.parsed;
+        // Process only nfts
+        if ( parsedData.info.tokenAmount.decimals == 0
+            && parsedData.info.tokenAmount.uiAmount == 1 ) {
+                console.log(`--> ${nftAccounts.length + 1} nft is determinted`);
+                const metaData = await getAccountsByMint(parsedData.info.mint, connection);
+                console.log('Get token metadata performed');
 
-        return nftAccounts;
-    // } catch (e) {
-    //     console.log(`--> Error: ${e}`);
-    //     return false;
-    // }
+                let parsedMetaData = {} as any;
+                if ( metaData.length != 0 ) {
+                    parsedMetaData = processMetaData(metaData[0][0]);
+                } 
+                console.log('Process token metadata performed');
+                
+                nftAccounts.push({
+                    account: token.pubkey.toBase58(),
+                    mint: parsedData.info.mint,
+                    metadataAccount: metaData[0][1],
+                    metadata: parsedMetaData,
+                })
+                console.log(nftAccounts[nftAccounts.length - 1]);
+
+                // Dump NFT account and data as file
+                saveDump(
+                    `${parsedData.info.mint}.json`,
+                    nftAccounts[nftAccounts.length - 1]
+                );
+                console.log(`\n--> ${nftAccounts.length} Nft is processed`);
+        }
+    }
+    console.log(`\n${nftAccounts.length} nfts determined from this wallet`);
+
+    return nftAccounts;
 }
 
+/**
+ * Fetch price info and related transactions
+ * 
+ * This function load the NFT metadata from dump. If there isn't dump file for this NFT,
+ * determine NFTs and then try again
+ * @param address The wallet address
+ * @param mint The mint address of NFT. To get prices and related transactions for all
+ *             NFTs in dump, assign this param as undefined
+ * @returns Price info for individual or all nft dumps
+ */
 export async function getTransactionData(address: string, mint: string | undefined) {
     const connection = new Connection(SOLANA_MAINNET, "confirmed");
-    let dumpName = '', dumpList = [] as any, result = [];
+
+    let dumpName = '',  // Dump file name to get price and transaction Info
+      dumpList = [] as any, // All dump file names for fetch all
+      result = [];  // For return
+
+    // If mint param is undefined, read all dump files for nfts
     if ( mint == undefined ) {
       dumpList = fs.readdirSync(DUMP_PATH);
       if (dumpList.length == 0) return undefined;
     } else dumpName = mint;
+
     for (let dumpId = 0; mint != undefined || dumpId < dumpList.length; dumpId++) {
       if (mint == undefined) dumpName = dumpList[dumpId];
       else dumpName = `${dumpName}.json`;
+      
       let dump = loadDump(dumpName);
       if (!dump) {
         console.log('Couldn\'t find nft metadata. Fetch NFTs and try again.');
@@ -90,6 +109,10 @@ export async function getTransactionData(address: string, mint: string | undefin
       }
       
       let fetchedNFTMetadata = undefined;
+      /*
+      Try to fetch NFT metadata from dump metadata uri
+      Maximum try again is 5. All trying will failed if the metadata uri is invalid
+      */ 
       for (let again = 0; again < 5; again++) {
           try {
               if (!dump.metadata.data.uri) break;
@@ -103,16 +126,23 @@ export async function getTransactionData(address: string, mint: string | undefin
               console.log(`Metadata fetch from arweave is failed. Trying again`);
           }
       }
+
+      // Continue if the metadata uri is exist but is invalid
       if (!fetchedNFTMetadata && !dump.metadata.data.uri) {
         console.log('Could\'t get NFT metadata. Fetch Nft again and then try again.');
         return false;
       }
       console.log('Get token nft metadata processed');
       
+      // Fetch related transactions with this mint address
       let trxTracks = [] as any;
       while (1) {
         try {
-          const result = await connection.getSignaturesForAddress(new PublicKey(dumpName.split('.')[0]), {limit: 100}, 'confirmed');
+          const result = await connection.getSignaturesForAddress(
+            new PublicKey(dumpName.split('.')[0]),
+            {limit: 100}, // maximum fetch count is 100
+            'confirmed'
+          );
           trxTracks = result;
           console.log('--> Fetched related signature for address');
           break;
@@ -120,25 +150,30 @@ export async function getTransactionData(address: string, mint: string | undefin
           console.log(`--> Error while fetch signatures: ${e}`);
         };
       };
-      // console.dir(trxTracks, {depth: null});
+
+      // Try to extract purchase or mint price, and convert transaction time from unix to locale format
       let trxData = [] as any, purchasedDate = '', purchasedPrice = 0;
       for( let idx = 0; idx < trxTracks.length; idx ++ ) {
           const time = (trxTracks[idx].blockTime ?? 0) * 1000;
           let date = new Date();
           date.setTime(time);
+          // Purchased date is the most recent transaction date
           if (purchasedDate == '') purchasedDate = date.toLocaleString();
+
           trxData.push({
               signature: trxTracks[idx].signature,
               slot: trxTracks[idx].slot,
               blockTime: date.toLocaleString(),
           })
-          // if (idx == 0 || idx == trxTracks.length - 1) {
-            const result = await getPriceInfo(trxTracks[idx].signature, address, connection);
-            const price = result == false ? 0 : result;
-            if (purchasedPrice == 0 || purchasedPrice < price) purchasedPrice = price;
-          // }
+
+          // Extract trade info for this nft
+          const result = await getPriceInfo(trxTracks[idx].signature, address, connection);
+          const price = result == false ? 0 : result;
+          if (purchasedPrice == 0 || purchasedPrice < price) purchasedPrice = price;
       };
       console.log(`--> Get purchased Price: ${purchasedPrice}`);
+
+      // Update dump file for this mint
       saveDump(dumpName, {
         ...dump,
         nftMetadata: fetchedNFTMetadata,
@@ -146,6 +181,7 @@ export async function getTransactionData(address: string, mint: string | undefin
         purchasedPrice,
         transactionData: trxData,
       });
+
       result.push({
         purchasedPrice,
         purchasedDate,
@@ -156,14 +192,21 @@ export async function getTransactionData(address: string, mint: string | undefin
     return result;
 }
 
-// Get Purchase Price from signature
+/**
+ * Get Purchase Price from signature
+ * @param sig The signature of trasction
+ * @param wallet The address of wallet
+ * @param connection The solana web3 connection object
+ * @returns The price of purchase or mint as sol
+ */
 const getPriceInfo = async (sig: string, wallet: string, connection: Connection) => {
     const parsedTrxDatas = await connection.getParsedConfirmedTransaction(sig, 'finalized');
     if (parsedTrxDatas == null) return false;
-    let parsedData = parseTransactionData(parsedTrxDatas, sig);
 
+    let parsedData = parseTransactionData(parsedTrxDatas, sig);
     let transaferData = [], purchaser = '', price = 0;
-    // Find mintAuthority
+
+    // Find mintAuthority and sol transfer
     for (const ins of parsedData.transaction.message.instructions) {
       if (ins.program == 'system' && ins.parsed.type == 'transfer') {
         if (ins.parsed.info.lamports % 10000 != 0) continue;
@@ -173,6 +216,8 @@ const getPriceInfo = async (sig: string, wallet: string, connection: Connection)
         purchaser = ins.parsed.info.mintAuthority;
       }
     }
+
+    // Find sol transfer for trade
     for (const ins of parsedData.meta.innerInstructions) {
       for (const innerIns of ins.instructions) {
         if (innerIns.program == 'system' && innerIns.parsed.type == 'transfer') {
@@ -181,18 +226,26 @@ const getPriceInfo = async (sig: string, wallet: string, connection: Connection)
         }
       }
     }
+
+    // Sum all transfer amount for revenure royalties
     for (const data of transaferData)
       if (data.source == wallet || data.source == purchaser)
         price += data.lamports;
-    // console.dir(transaferData, {depth: null});
+
     console.log(`--> Parsed price: ${purchaser} - ${price / DEFAULT_SOL}`);
     return price / DEFAULT_SOL;
 }
 
-// Convert all PublicKeys in the transactions data as base58 string
+/**
+ * Convert all PublicKeys in the transactions data as base58 string
+ * @param raw Pared transaction data to convert
+ * @param sig Will add the signature of this transaction in parsed data struct
+ * @returns Formated transaction data
+ */
 export const parseTransactionData = (raw: ParsedConfirmedTransaction | null, sig: string) => {
   let parsedData = raw as any;
   parsedData.signature = sig;
+
   // Parse innerInstruction accounts
   let newInnerIns = [];
   for ( const innerIns of raw?.meta?.innerInstructions ?? []) {
@@ -202,6 +255,8 @@ export const parseTransactionData = (raw: ParsedConfirmedTransaction | null, sig
           newData.programId = ins.programId.toBase58();
           if (newData.accounts) {
               let newAccounts = [];
+              
+              // Convert innerInstructions account pubkey as string
               for (const account of newData.accounts) newAccounts.push(account.toBase58());
               newData.accounts = newAccounts;
           }
@@ -217,11 +272,15 @@ export const parseTransactionData = (raw: ParsedConfirmedTransaction | null, sig
   // Parse transaction accounts
   let newTransaction = raw?.transaction as any;
   let newAccountKeys = [];
+
+  // Convert transaction account pubkeys as string
   for ( const account of newTransaction?.message.accountKeys ?? [])
       newAccountKeys.push({
           ...account,
           pubkey: account.pubkey.toBase58(),
       })
+
+  // Convert the account pubkeys in innerInstructions as string
   let newInstructions = [];
   for ( const ins of newTransaction?.message.instructions) {
       let newIns = ins as any;
@@ -246,6 +305,7 @@ export const parseTransactionData = (raw: ParsedConfirmedTransaction | null, sig
   return parsedData;
 }
 
+// Reduce the zero byte from parsed account metadata and convert creator address as string
 function processMetaData(meta: Metadata) {
     let bufMeta = meta as any;
     bufMeta.updateAuthority = (new PublicKey(meta.updateAuthority)).toBase58();
@@ -301,7 +361,7 @@ async function getAccountsByMint(mint: string, connection: Connection) {
   return decodedAccounts;
 }
 
-
+// Build the rpcRequest to get program account
 async function getProgramAccounts(
     connection: Connection,
     programId: String,

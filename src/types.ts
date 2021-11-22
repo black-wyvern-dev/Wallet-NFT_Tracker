@@ -74,41 +74,6 @@ export class Metadata {
 }
 
 export const METADATA_SCHEMA = new Map<any, any>([
-    // [
-    //   MasterEditionV1,
-    //   {
-    //     kind: 'struct',
-    //     fields: [
-    //       ['key', 'u8'],
-    //       ['supply', 'u64'],
-    //       ['maxSupply', { kind: 'option', type: 'u64' }],
-    //       ['printingMint', 'pubkey'],
-    //       ['oneTimePrintingAuthorizationMint', [32]],
-    //     ],
-    //   },
-    // ],
-    // [
-    //   MasterEditionV2,
-    //   {
-    //     kind: 'struct',
-    //     fields: [
-    //       ['key', 'u8'],
-    //       ['supply', 'u64'],
-    //       ['maxSupply', { kind: 'option', type: 'u64' }],
-    //     ],
-    //   },
-    // ],
-    // [
-    //   Edition,
-    //   {
-    //     kind: 'struct',
-    //     fields: [
-    //       ['key', 'u8'],
-    //       ['parent', [32]],
-    //       ['edition', 'u64'],
-    //     ],
-    //   },
-    // ],
     [
       Data,
       {
@@ -147,14 +112,4 @@ export const METADATA_SCHEMA = new Map<any, any>([
         ],
       },
     ],
-    // [
-    //   EditionMarker,
-    //   {
-    //     kind: 'struct',
-    //     fields: [
-    //       ['key', 'u8'],
-    //       ['ledger', [31]],
-    //     ],
-    //   },
-    // ],
 ]);
