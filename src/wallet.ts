@@ -100,8 +100,10 @@ export async function getTransactionData(address: string, mint: string | undefin
 
     for (let dumpId = 0; mint != undefined || dumpId < dumpList.length; dumpId++) {
       if (mint == undefined) dumpName = dumpList[dumpId];
-      else dumpName = `${dumpName}.json`;
-      
+      else {
+        if (dumpId!= 0) break;
+        dumpName = `${dumpName}.json`;
+      }
       let dump = loadDump(dumpName);
       if (!dump) {
         console.log('Couldn\'t find nft metadata. Fetch NFTs and try again.');
@@ -130,6 +132,7 @@ export async function getTransactionData(address: string, mint: string | undefin
       // Continue if the metadata uri is exist but is invalid
       if (!fetchedNFTMetadata && !dump.metadata.data.uri) {
         console.log('Could\'t get NFT metadata. Fetch Nft again and then try again.');
+        if (mint == undefined) continue;
         return false;
       }
       console.log('Get token nft metadata processed');
@@ -182,10 +185,15 @@ export async function getTransactionData(address: string, mint: string | undefin
         transactionData: trxData,
       });
 
+      const project = fetchedNFTMetadata.name.split('#'); 
       result.push({
+        mint: dump.mint,
         purchasedPrice,
         purchasedDate,
-        data: trxData
+        projectName: project[0],
+        nftNumber: project.length == 1 ? '' : `#${project[1]}`,
+        symbol: fetchedNFTMetadata.symbol,
+        family: fetchedNFTMetadata.collection ? fetchedNFTMetadata.collection.family : '',
       });
     }
     

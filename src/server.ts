@@ -10,11 +10,13 @@ app.get('/', async (req, res) => {
     const address = req.query.address as string;//'9X3n2WPj8k7GB2wD7MxSxuL3VqC2e6YaafdcyPbr8xys';//
     console.log(`Requested wallet address ${address}`);
     const result = await fetchWalletForNFTs(address);
+    let nftResult = [];
     for (const nft of result ?? []) {
-      await getTransactionData(address, nft.mint);
+      const nftData = await getTransactionData(address, nft.mint);
+      if (nftData) nftResult.push(nftData);
     }
     console.log(`Request is${result == false ? ' not' : ''} process`);
-    res.send(`Requested wallet address ${address}<br>${JSON.stringify(result)}`);
+    res.send(`Requested wallet address ${address}<br>${JSON.stringify(nftResult)}`);
   } catch (e) {
     console.log(`Request isn't process: ${e}`);
     res.send(e);
