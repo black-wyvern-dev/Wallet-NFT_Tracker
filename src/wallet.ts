@@ -185,16 +185,22 @@ export async function getTransactionData(address: string, mint: string | undefin
         transactionData: trxData,
       });
 
-      const project = fetchedNFTMetadata.name.split('#'); 
-      result.push({
+      let nft = {
         mint: dump.mint,
         purchasedPrice,
         purchasedDate,
-        projectName: project[0],
-        nftNumber: project.length == 1 ? '' : `#${project[1]}`,
-        symbol: fetchedNFTMetadata.symbol,
-        family: fetchedNFTMetadata.collection ? fetchedNFTMetadata.collection.family : '',
-      });
+      } as any;
+      if (fetchedNFTMetadata) {
+        const project = fetchedNFTMetadata.name.split('#'); 
+        nft = {
+          ...nft,
+          projectName: project[0],
+          nftNumber: project.length == 1 ? '' : `#${project[1]}`,
+          symbol: fetchedNFTMetadata.symbol,
+          family: fetchedNFTMetadata.collection ? fetchedNFTMetadata.collection.family : '',
+        };
+      }
+      result.push(nft);
     }
     
     return result;
