@@ -62,14 +62,15 @@ export const fetchWalletForNFTs = async (address: string) => {
                 })
                 console.log(nftAccounts[nftAccounts.length - 1]);
 
-                // Dump NFT account and data as file
-                saveDump(
-                    `${parsedData.info.mint}.json`,
-                    nftAccounts[nftAccounts.length - 1]
-                );
+                // // Dump NFT account and data as file
+                // saveDump(
+                //     `${parsedData.info.mint}.json`,
+                //     nftAccounts[nftAccounts.length - 1]
+                // );
                 console.log(`\n--> ${nftAccounts.length} Nft is processed`);
         }
     }
+    console.dir(nftAccounts, {depth: null});
     console.log(`\n${nftAccounts.length} nfts determined from this wallet`);
 
     return nftAccounts;
