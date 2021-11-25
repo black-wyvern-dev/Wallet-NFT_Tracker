@@ -5,6 +5,9 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import { AccountAndPubkey, Metadata, METADATA_SCHEMA } from "./types";
+import {
+  getParsedNftAccountsByOwner
+} from "@nfteyez/sol-rayz";
 
 const SOLANA_MAINNET = "https://api.mainnet-beta.solana.com";
 const DUMP_PATH = __dirname + '/../dumps';
@@ -23,54 +26,8 @@ const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
 export const fetchWalletForNFTs = async (address: string) => {
     const wallet = new PublicKey(address);
     const connection = new Connection(SOLANA_MAINNET, "confirmed");
+    const nftAccounts = await getParsedNftAccountsByOwner({publicAddress: wallet , connection: connection});
 
-    // Retrieve spl-tokens in wallet
-    const ownedTokens = await connection.getParsedTokenAccountsByOwner(wallet, {
-        programId: TOKEN_PROGRAM_ID,
-    });
-
-    let nftAccounts = [] as any;
-    for ( const token of ownedTokens.value ) {
-
-        // Convert BN type public keys to string
-        let parsedToken = {
-            account: {
-                ...token.account,
-                owner: token.account.owner.toBase58(),
-            },
-            pubkey: token.pubkey.toBase58(),
-        }
-        const parsedData = parsedToken.account.data.parsed;
-        // Process only nfts
-        if ( parsedData.info.tokenAmount.decimals == 0
-            && parsedData.info.tokenAmount.uiAmount == 1 ) {
-                console.log(`--> ${nftAccounts.length + 1} nft is determinted`);
-                const metaData = await getAccountsByMint(parsedData.info.mint, connection);
-                console.log('Get token metadata performed');
-
-                let parsedMetaData = {} as any;
-                if ( metaData.length != 0 ) {
-                    parsedMetaData = processMetaData(metaData[0][0]);
-                } 
-                console.log('Process token metadata performed');
-                
-                nftAccounts.push({
-                    account: token.pubkey.toBase58(),
-                    mint: parsedData.info.mint,
-                    metadataAccount: metaData[0][1],
-                    metadata: parsedMetaData,
-                })
-                console.log(nftAccounts[nftAccounts.length - 1]);
-
-                // // Dump NFT account and data as file
-                // saveDump(
-                //     `${parsedData.info.mint}.json`,
-                //     nftAccounts[nftAccounts.length - 1]
-                // );
-                console.log(`\n--> ${nftAccounts.length} Nft is processed`);
-        }
-    }
-    console.dir(nftAccounts, {depth: null});
     console.log(`\n${nftAccounts.length} nfts determined from this wallet`);
 
     return nftAccounts;
