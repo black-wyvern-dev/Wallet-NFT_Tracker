@@ -10,10 +10,8 @@ export const TEST_COLLECTION_LIST = [
 
 const getHistorySolanart = (collection: string) => {
     return new Promise((resolve) => {
-        axios.get(`https://qzlsklfacc.medianetwork.cloud/all_sold_per_collection_day?collection=${collection}`).then((res) => {
-            res.data.then((data: any) => {
-                resolve(data);
-            }).catch(() => resolve([]));
+        axios.get(`https://qzlsklfacc.medianetwork.cloud/all_sold_per_collection_day?collection=${collection}`).then((res) => res.data).then((res) => {
+            resolve(res);
         }).catch(() => resolve([]));
     });
 };
@@ -68,7 +66,7 @@ const fetchMagicEdenNFT = (mint: string) => {
     return new Promise((resolve) => {
         axios.get(`https://api-mainnet.magiceden.io/rpc/getNFTByMintAddress/${mint}`).then((res) => res.data.results)
         .then((data: any) => {
-            resolve(data.results);
+            resolve(data);
         }).catch(() => resolve([]));
     });
 }
@@ -86,10 +84,9 @@ const getHistoryMagicEden = (collection: string) => {
             $skip: 0,
             $limit: 10
         })));
-        axios.get(`https://api-mainnet.magiceden.io/rpc/getGlobalActivitiesByQuery?q=${query}`).then((res) => {
-            res.data.then((data: any) => {
-                resolve(data.results);
-            }).catch(() => resolve([]));
+        axios.get(`https://api-mainnet.magiceden.io/rpc/getGlobalActivitiesByQuery?q=${query}`).then((res) => res.data)
+        .then((res) => {
+            resolve(res.results);
         }).catch(() => resolve([]));
     });
 }
@@ -139,6 +136,7 @@ export const fetchCollectionFloorPrices = async (listings: string[]) => {
         const interval = setInterval(() => {
             if (count == listings.length * 2) {
                 resolve(results);
+                clearInterval(interval);
             }
         }, 300);
     });
@@ -148,8 +146,7 @@ export const synchronizeSolanart = () => {
     // [
     //     'thetower'
     // ].forEach((collection) => {
-    //     const latestSale = db.get(`last_sales_solanart_${collection}`);
-    //     const latestListing = db.get(`last_listings_solanart_${collection}`);
+    // const latestListing = loadDump(`/solanart/last_listings_solanart_${collection}`);
 
     //     getListingSolanart(collection).then((listings) => {
             
@@ -188,57 +185,9 @@ export const synchronizeSolanart = () => {
     //         });
 
     //     });
-        
-    //     getHistorySolanart(collection).then((events) => {
 
-    //         const sortedEvents = events
-    //             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    //         if (!sortedEvents.length) return;
-            
-    //         const newEvents = sortedEvents
-    //             .filter((e) => new Date(e.date).getTime() > latestSale || !latestSale);
-
-    //         db.set(`last_sales_solanart_${collection}`, new Date(sortedEvents[0].date).getTime());
-
-    //         (latestSale ? newEvents.reverse() : [sortedEvents[0]]).forEach((event) => {
-
-    //             const embed = new Discord.MessageEmbed()
-    //                 .setTitle(`${event.name} has been sold out!`)
-    //                 .setURL(`https://explorer.solana.com/address/${event.token_add}`)
-    //                 .addField('Price', `**${event.price} SOL**`)
-    //                 .addField('Buyer', event.buyerAdd)
-    //                 .addField('Seller', event.seller_address)
-    //                 .setImage(event.link_img)
-    //                 .setTimestamp(new Date(event.date))
-    //                 .setColor('DARK_AQUA')
-    //                 .setFooter('Solanart');
-
-    //             client.channels.cache.get(process.env.SOLANART_SALES_CHANNEL_ID).send({
-    //                 embeds: [embed]
-    //             }).catch(() => {});
-
-    //         });
-
-    //     });
-
-    // });
-};
-
-export const synchronizeMagicEden = (listings: string[]) => {
-    TEST_COLLECTION_LIST.forEach((collection) => {
-        console.log(`---> Start synchronize for ${collection} from MagicEden`);
-        const latestSale = loadDump(`/magiceden/last_sales_magiceden`);
-        const latestListing = loadDump(`/magiceden/last_listings_magiceden`);
-        
-        getCollectionInfoMagicEden(collection).then((floorPrice: any) => {
-            console.log(`${collection}: ${floorPrice}`);
-            if (!floorPrice.length) return;
-            // if (newListings[0] || !latestListing) {
-            //     saveDump(`/magiceden/last_listings_magiceden_${collection}`, newListings[0].title);
-            // }
-        });
-
+        // const latestListing = loadDump(`/magiceden/last_listings_magiceden_${collection}`);
+                
         // getListingMagicEden(collection).then((listings: any) => {
         //     console.dir(listings, {depth: null});
         //     if (!listings.length) return;
@@ -255,7 +204,7 @@ export const synchronizeMagicEden = (listings: string[]) => {
         //     }
 
         //     if (newListings[0] || !latestListing) {
-        //         saveDump(`/magiceden/last_listings_magiceden_${collection}`, newListings[0].title);
+        //         // saveDump(`/magiceden/last_listings_magiceden_${collection}`, newListings[0].title);
         //     }
 
         //     newListings.reverse().forEach((event: any) => {
@@ -274,39 +223,91 @@ export const synchronizeMagicEden = (listings: string[]) => {
         //     });
 
         // });
-        
-        // getHistoryMagicEden(collection).then((events: any) => {
 
-        //     const sortedEvents = events
-        //         .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    // });
+};
 
-        //     if (!sortedEvents.length) return;
+export const checkNewSales = (listings: string[]) => {
+    return new Promise((resolve, reject) => {
+        if (listings.length == 0) resolve([]);
+        let result = [] as any, count = 0;
+        listings.forEach((collection) => {
+            console.log(`---> Start synchronize for ${collection} from MagicEden`);
+            const latestSale = loadDump(`/magiceden/last_sales_magiceden_${collection}`);
             
-        //     const newEvents = sortedEvents
-        //         .filter((e: any) => new Date(e.createdAt).getTime() > latestSale || !latestSale);
+            getHistoryMagicEden(collection).then((events: any) => {
+                console.log(`---> Fetched for ${collection} from MagicEden`);
+                count++;
+                const sortedEvents = events
+                .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-        //     if (new Date(sortedEvents[0].createdAt).getTime() > latestSale || !latestSale) {
-        //         saveDump(`/magiceden/last_sales_magiceden_${collection}`, new Date(sortedEvents[0].createdAt).getTime());
-        //     }
+                if (!sortedEvents.length) return;
+                const newEvents = sortedEvents
+                .filter((e: any) => new Date(e.createdAt).getTime() > latestSale || !latestSale);
 
-        //     (latestSale ? newEvents.reverse() : [sortedEvents[0]]).forEach(async (event: any) => {
+                if (new Date(sortedEvents[0].createdAt).getTime() > latestSale || !latestSale) {
+                    saveDump(`/magiceden/last_sales_magiceden_${collection}`, new Date(sortedEvents[0].createdAt).getTime());
+                }
+                (latestSale ? newEvents.reverse() : sortedEvents).forEach(async (event: any) => {
+                    if (!event.parsedTransaction) return;
 
-        //         if (!event.parsedTransaction) return;
+                    const nft = event.parsedTransaction;
+                    result.push({
+                        collection,
+                        mint: nft.mint,
+                        buyer: nft.buyer_address,
+                        seller: nft.seller_address,
+                        price: nft.total_amount / LAMPORTS_PER_SOL,
+                        time: event.createdAt,
+                        market: event.source,
+                    });
+                });
 
-        //         const nft: any = await fetchMagicEdenNFT(event.parsedTransaction.mint);
+            }).catch(e => {
+                console.log(e);
+                count++;
+            });
 
-        //         console.log(`${nft.title} has been sold out!`)
-        //         console.log(`https://explorer.solana.com/tx/${event.transaction_id}`)
-        //         console.log('Price', `**${(event.parsedTransaction.total_amount / 10E8).toFixed(2)} SOL**`)
-        //         console.log('Buyer', event.parsedTransaction.buyer_address)
-        //         console.log('Seller', event.seller_address)
-        //         console.log(nft.img)
-        //         console.log(new Date(event.createdAt))
-        //         console.log('DARK_AQUA')
-        //         console.log('Magic Eden');
-        //     });
+            console.log(`---> Start synchronize for ${collection} from Solanart`);
+            
+            const latestSaleArt = loadDump(`/solanart/last_sales_solanart_${collection}`);
+            
+            getHistorySolanart(collection).then((events: any) => {
+                console.log(`---> Fetched for ${collection} from Solanart`);
+                count++;
+                const sortedEvents = events
+                    .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                if (!sortedEvents.length) return;
+                const newEvents = sortedEvents
+                .filter((e: any) => new Date(e.date).getTime() > latestSaleArt || !latestSaleArt);
 
-        // });
+                if (new Date(sortedEvents[0].date).getTime() > latestSaleArt || !latestSaleArt) {
+                    saveDump(`/solanart/last_sales_solanart_${collection}`, new Date(sortedEvents[0].date).getTime());
+                }
 
-    });
+                (latestSaleArt ? newEvents.reverse() : sortedEvents).forEach(async (event: any) => {
+                    result.push({
+                        collection,
+                        mint: event.token_add,
+                        buyer: event.buyerAdd,
+                        seller: event.seller_address,
+                        price: event.price,
+                        time: event.date,
+                        market: 'solanart',
+                    });
+                });
+            }).catch(e => {
+                console.log(e);
+                count++;
+            });
+        });
+
+        const interval = setInterval(() => {
+            if (count == listings.length * 2) {
+                saveDump(`/last_sales_result`, result);
+                resolve(result);
+                clearInterval(interval);
+            }
+        }, 200);
+    })
 };
