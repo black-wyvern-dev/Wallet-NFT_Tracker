@@ -4,12 +4,12 @@ import * as borsh from 'borsh';
 import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
-import { AccountAndPubkey, Metadata, METADATA_SCHEMA } from "./types";
 import {
   getParsedNftAccountsByOwner
 } from "@nfteyez/sol-rayz";
+import { AccountAndPubkey, Metadata, METADATA_SCHEMA } from "./types";
 
-const SOLANA_MAINNET = "https://api.mainnet-beta.solana.com";
+const SOLANA_MAINNET = "https://solana-api.projectserum.com";
 const DUMP_PATH = __dirname + '/../dumps';
 const DEFAULT_SOL = 1000000000;
 const TOKEN_METADATA_PROGRAM_ID = new PublicKey(

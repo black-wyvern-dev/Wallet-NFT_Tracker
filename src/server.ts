@@ -1,5 +1,6 @@
 import express from 'express';
 import { fetchWalletForNFTs, getTransactionData } from './wallet';
+import { fetchCollectionFloorPrices, synchronizeMagicEden, synchronizeSolanart, TEST_COLLECTION_LIST} from './market';
 
 const app = express();
 const port = 3000;
@@ -32,8 +33,30 @@ app.get('/nft', async (req, res) => {
   }
 });
 
+app.get('/get_floor_price', async (req, res) => {
+  const collections = (req.query.collections as string).split(',');
+  console.log(`Request fetch floorPrices`);
+  console.log(collections);
+  if (collections.length == 0) res.send([]);
+  fetchCollectionFloorPrices(collections).then((result) => {
+    console.log('---------');
+    console.dir(result, {depth: null});
+    res.send(result);
+  });
+});
+
 app.listen(port, () => {
   console.log(`server is listening on ${port}`);
   // func();
+  
+  // do not wait the 10s and start syncing right now
+  // synchronizeSolanart();
+  // synchronizeMagicEden([]);
+  fetchCollectionFloorPrices(TEST_COLLECTION_LIST).then((result) => {
+    console.log('---------');
+    console.dir(result, {depth: null});
+  });
+  // setInterval(() => synchronizeSolanart(), 10_000);
+  // setInterval(() => synchronizeMagicEden(), 10_000);
   return ;
 });
