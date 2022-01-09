@@ -71,21 +71,5 @@ app.get('/check_new_offers', async (req, res) => {
 
 app.listen(port, () => {
   console.log(`server is listening on ${port}`);
-  
-  // checkNewSales(TEST_COLLECTION_LIST).then((result: any) => {
-  //   console.log(result);
-  // })
-
-  checkNewOffers(['monkeyball']).then((result: any) => {
-    console.log(result);
-  })
-
-  // fetchCollectionFloorPrices(TEST_COLLECTION_LIST).then((result) => {
-  //   console.log('---------');
-  //   console.dir(result, {depth: null});
-  // });
-
-  // setInterval(() => checkNewOffers(), 10_000);
-  // setInterval(() => checkNewSales(), 10_000);
   return ;
 });
