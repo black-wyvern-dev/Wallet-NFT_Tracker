@@ -1,6 +1,6 @@
 import express from 'express';
 import { fetchWalletForNFTs, getTransactionData } from './wallet';
-import { fetchCollectionFloorPrices, checkNewSales, synchronizeSolanart, TEST_COLLECTION_LIST} from './market';
+import { fetchCollectionFloorPrices, checkNewSales, checkNewOffers, TEST_COLLECTION_LIST} from './market';
 
 const app = express();
 const port = 3000;
@@ -57,23 +57,35 @@ app.get('/check_new_sales', async (req, res) => {
   });
 });
 
+app.get('/check_new_offers', async (req, res) => {
+  const collections = (req.query.collections as string).split(',');
+  console.log(`Request check new offers`);
+  console.log(collections);
+  if (collections.length == 0) res.send([]);
+  checkNewOffers(collections).then((result) => {
+    console.log('---------');
+    console.dir(result, {depth: null});
+    res.send(result);
+  });
+});
 
 app.listen(port, () => {
   console.log(`server is listening on ${port}`);
-  // func();
   
-  // do not wait the 10s and start syncing right now
-  // synchronizeSolanart();
   // checkNewSales(TEST_COLLECTION_LIST).then((result: any) => {
   //   console.log(result);
   // })
+
+  checkNewOffers(['monkeyball']).then((result: any) => {
+    console.log(result);
+  })
 
   // fetchCollectionFloorPrices(TEST_COLLECTION_LIST).then((result) => {
   //   console.log('---------');
   //   console.dir(result, {depth: null});
   // });
 
-  // setInterval(() => synchronizeSolanart(), 10_000);
+  // setInterval(() => checkNewOffers(), 10_000);
   // setInterval(() => checkNewSales(), 10_000);
   return ;
 });

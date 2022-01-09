@@ -16,12 +16,10 @@ const getHistorySolanart = (collection: string) => {
     });
 };
 
-const getListingSolanart = (collection: string) => {
+const getListingSolanart = (collection: string, page: number) => {
     return new Promise((resolve) => {
-        axios.get(`https://qzlsklfacc.medianetwork.cloud/nft_for_sale?collection=${collection}`).then((res) => {
-            res.data.then((data: any) => {
-                resolve(data);
-            }).catch(() => resolve([]));
+        axios.get(`https://qzlsklfacc.medianetwork.cloud/get_nft?collection=${collection}&page=${page}&limit=100&order=&fits=any&trait=&search=&min=0&max=0&listed=true&ownedby=&attrib_count=&bid=all`).then((res) => {
+            resolve(res.data);
         }).catch(() => resolve([]));
     });
 };
@@ -53,7 +51,6 @@ const getListingMagicEden = (collection: string) => {
                 createdAt: -1
             },
             $skip: 0,
-            $limit: 10
         })));
         axios.get(`https://api-mainnet.magiceden.io/rpc/getListedNFTsByQuery?q=${query}`).then((res) => res.data.results)
         .then((data: any) => {
@@ -62,11 +59,21 @@ const getListingMagicEden = (collection: string) => {
     });
 };
 
-const fetchMagicEdenNFT = (mint: string) => {
+const fetchMagicEdenNFT = (pubkey: string) => {
     return new Promise((resolve) => {
-        axios.get(`https://api-mainnet.magiceden.io/rpc/getNFTByMintAddress/${mint}`).then((res) => res.data.results)
+        const query = decodeURI(escape(JSON.stringify({
+            $match: {
+                escrowPubkey: pubkey
+            },
+            $sort:  {
+                createdAt: -1
+            },
+            $skip: 0,
+            $limit: 10
+        })));
+        axios.get(`https://api-mainnet.magiceden.io/rpc/getBiddingsByQuery?q=${query}`).then((res) => res.data)
         .then((data: any) => {
-            resolve(data);
+            resolve(data.results);
         }).catch(() => resolve([]));
     });
 }
@@ -142,89 +149,118 @@ export const fetchCollectionFloorPrices = async (listings: string[]) => {
     });
 }
 
-export const synchronizeSolanart = () => {
-    // [
-    //     'thetower'
-    // ].forEach((collection) => {
-    // const latestListing = loadDump(`/solanart/last_listings_solanart_${collection}`);
-
-    //     getListingSolanart(collection).then((listings) => {
-            
-    //         if (!listings.length) return;
-            
-    //         let newListings = [];
-    //         const indexOfLastListingInNewArray = listings.findIndex((e) => e.name === latestListing);
-
-    //         // if the last listing can not be found
-    //         // (for example if the latest listing was deleted)
-    //         if (indexOfLastListingInNewArray === -1) {
-    //             newListings.push(listings[0]);
-    //         } else {
-    //             newListings = listings.slice(0, indexOfLastListingInNewArray);
-    //         }
-
-    //         if (newListings[0] || !latestListing) {
-    //             db.set(`last_listings_solanart_${collection}`, newListings[0].name);
-    //         }
-
-    //         newListings.reverse().forEach((event) => {
-
-    //             const embed = new Discord.MessageEmbed()
-    //                 .setTitle(`${event.name} has been listed!`)
-    //                 .setURL(`https://explorer.solana.com/address/${event.token_add}`)
-    //                 .addField('Price', `**${event.price} SOL**`)
-    //                 .setImage(event.link_img)
-    //                 .setColor('DARK_AQUA')
-    //                 .setTimestamp()
-    //                 .setFooter('Solanart');
-
-    //             client.channels.cache.get(process.env.SOLANART_LISTINGS_CHANNEL_ID).send({
-    //                 embeds: [embed]
-    //             }).catch(() => {});
-
-    //         });
-
-    //     });
-
-        // const latestListing = loadDump(`/magiceden/last_listings_magiceden_${collection}`);
-                
-        // getListingMagicEden(collection).then((listings: any) => {
-        //     console.dir(listings, {depth: null});
-        //     if (!listings.length) return;
-            
-        //     let newListings = [];
-        //     const indexOfLastListingInNewArray = listings.findIndex((e: any) => e.title === latestListing);
-
-        //     // if the last listing can not be found
-        //     // (for example if the latest listing was deleted)
-        //     if (indexOfLastListingInNewArray === -1) {
-        //         newListings.push(listings[0]);
-        //     } else {
-        //         newListings = listings.slice(0, indexOfLastListingInNewArray);
-        //     }
-
-        //     if (newListings[0] || !latestListing) {
-        //         // saveDump(`/magiceden/last_listings_magiceden_${collection}`, newListings[0].title);
-        //     }
-
-        //     newListings.reverse().forEach((event: any) => {
-
-        //         setTimeout(async () => {
-        //             const nft: any = await fetchMagicEdenNFT(event.mintAddress);
+export const checkNewOffers = (listings: string[]) => {
+    return new Promise((resolve, reject) => {
+        if (listings.length == 0) resolve([]);
+        let result = [] as any, count = 0;
+        listings.forEach(async (collection) => {
+            console.log(`---> Start synchronize for ${collection} from MagicEden`);
+            const latestOffer = loadDump(`/magiceden/last_offers_magiceden_${collection}`);
                     
-        //             console.log(`${nft.title} has been listed!`)
-        //             console.log(`https://explorer.solana.com/address/${nft.mintAddress}`)
-        //             console.log('Price', `**${nft.price} SOL**`)
-        //             console.log(nft.img)
-        //             console.log(new Date(event.createdAt))
-        //             console.log('DARK_AQUA')
-        //             console.log('Magic Eden');
-        //         }, 5000);
-        //     });
+            getListingMagicEden(collection).then((listings: any) => {
+                console.log(`---> Fetched Listings for ${collection} from MagicEden`);
+                if (!listings.length){
+                    count++;
+                    return;
+                }
+                const list = listings.map((res: any) => res.escrowPubkey);                
+                let index = 0, newOffers = [] as any;
 
-        // });
+                list.reverse().forEach((pubkey: string) => {
+                    fetchMagicEdenNFT(pubkey).then((res: any) => {
+                        if (res.length > 0) {
+                            for (const data of res)
+                                newOffers.push(data);
+                        }
+                        index++;
+                    }).catch((e) => {
+                        index++;
+                    });
+                });
+                const itvl = setInterval(() => {console.log(index);
+                    if (index == list.length) {
+                        console.log(`---> Fetched New Offers for ${collection} from MagicEden`);
+                        const sortedOffers = newOffers
+                        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                        if (sortedOffers.length > 0) {
+                            const newOffers = sortedOffers
+                            .filter((e: any) => new Date(e.createdAt).getTime() > latestOffer || !latestOffer);
+            
+                            if (new Date(sortedOffers[0].createdAt).getTime() > latestOffer || !latestOffer) {
+                                saveDump(`/magiceden/last_offers_magiceden_${collection}`, new Date(sortedOffers[0].createdAt).getTime());
+                            }
 
-    // });
+                            for (const data of newOffers)
+                                result.push({
+                                    collection,
+                                    escrow: data.escrowPubkey,
+                                    buyer: data.bidderPubkey,
+                                    seller: data.initializerKey,
+                                    bid_price: data.bidderAmountLamports / LAMPORTS_PER_SOL,
+                                    market: 'magiceden',
+                                });
+                        }
+                        count++;
+                        clearInterval(itvl);
+                    }
+                }, 200);
+            }).catch(e => {
+                console.log(e);
+                count++;
+            });
+
+            console.log(`---> Start synchronize for ${collection} from Solanart`);
+            const latestOffers = loadDump(`/solanart/last_offers_solanart_${collection}`);
+            let offerResults = [] as any, page = 0;
+            while (1) {
+                try {
+                    const response: any = await getListingSolanart(collection, page);
+                    const offers = response.items
+                    .filter((offer: any) => offer.currentBid != null);
+                    offerResults.push(...offers)
+                    if (response.pagination.currentPage == response.pagination.maxPages) {
+                        console.log(`---> Fetched for ${collection} from Solanart`);
+                        const newOffers = offerResults.filter((offer: any) => {
+                            if (!latestOffers) return true;
+                            for (const listing of latestOffers) {
+                                if (listing.id == offer.id) {
+                                    if (listing.bidder_address != offer.bidder_address || listing.currentBid != offer.currentBid) return true;
+                                    return false;
+                                }
+                            }
+                            return true;
+                        });
+                        result.push(...newOffers.map((offer: any) => {
+                            return {
+                                collection: offer.type,
+                                escrow: offer.escrowAdd,
+                                buyer: offer.bidder_address,
+                                seller: offer.seller_address,
+                                bid_price: offer.currentBid,
+                                market: 'solanart',
+                            }
+                        }));
+                        count++;
+                        saveDump(`/solanart/last_offers_solanart_${collection}`, offerResults);
+                        break;
+                    }
+                    page++;
+                } catch (error) {
+                    console.log(error);
+                    count++;
+                }
+            }
+
+        });
+        
+        const interval = setInterval(() => {
+            if (count == listings.length * 2) {
+                saveDump(`/last_offers_result`, result);
+                resolve(result);
+                clearInterval(interval);
+            }
+        }, 200);
+    });
 };
 
 export const checkNewSales = (listings: string[]) => {
