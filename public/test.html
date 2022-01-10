@@ -9,7 +9,7 @@
         $('div').append('<p>' + $('<div/>').text(str).html() + '</p>');
         $(window).scrollTop($('body').height() - $(window).height() + 80);
       }
-      var socket = io('http://localhost:3000');
+      var socket = io('http://92.38.130.111:3000');
       socket.on('msg', function(data) {
         console.log(data);
       });
