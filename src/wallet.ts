@@ -8,13 +8,10 @@ import {
   getParsedNftAccountsByOwner
 } from "@nfteyez/sol-rayz";
 import { AccountAndPubkey, Metadata, METADATA_SCHEMA } from "./types";
+import { SOLANA_MAINNET, TOKEN_METADATA_PROGRAM_ID } from './config/constant';
 
-const SOLANA_MAINNET = "https://solana-api.projectserum.com";
 const DUMP_PATH = __dirname + '/../dumps';
 const DEFAULT_SOL = 1000000000;
-const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
-  'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s',
-);
 
 /**
  * Determine NFTs on wallet

@@ -1,12 +1,8 @@
-import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { Connection, LAMPORTS_PER_SOL, ParsedInnerInstruction, ParsedInstruction, PartiallyDecodedInstruction } from '@solana/web3.js';
 import axios from 'axios';
+import { Server } from 'socket.io';
+import { isAttachingListener, MAGIC_EDEN_PROGRAM_PUBKEY, setAttachingListener, SOLANA_MAINNET, SOLANA_TRX_FEE } from './config/constant';
 import { loadDump, saveDump } from './wallet';
-
-export const TEST_COLLECTION_LIST = [
-    '111_solana_tattoos',
-    'solana_monkey_business',
-    'monkeyball',
-]
 
 const getHistorySolanart = (collection: string) => {
     return new Promise((resolve) => {
@@ -347,3 +343,125 @@ export const checkNewSales = (listings: string[]) => {
         }, 200);
     })
 };
+
+const getListingsMagicEden = (collections: string[]) => {
+    return new Promise((resolve, reject) => {
+        let result = [] as any, count = 0;
+        collections.forEach((collection) => {
+            getListingMagicEden(collection).then((res: any) => {
+                if (!res.length){
+                    return;
+                }
+                result.push(...res);
+            }).catch((e) => {
+            }).finally(() => {
+                count++;
+            })
+        })
+        const itvl = setInterval(() => {
+            if (count == collections.length) {
+                resolve(result);
+                clearInterval(itvl);
+            }
+        }, 300);
+    });
+}
+
+export const attachMarketEventListener = async (collections: string[], io: Server) => {
+    const connection = new Connection(SOLANA_MAINNET, "confirmed");
+    let related_sigs: any = [], listings = [] as any, newActs = [] as any;
+    connection.onLogs(MAGIC_EDEN_PROGRAM_PUBKEY, async (logs, ctx) => {
+        related_sigs.push(logs.signature);
+    });
+
+    listings = await getListingsMagicEden(collections);
+    setAttachingListener(true);
+
+    while (isAttachingListener) {
+        const newTrack = async () => {
+            if (related_sigs.length == 0) return;
+            const sigs = related_sigs;
+            related_sigs = [];
+            const trxs = await connection.getParsedConfirmedTransactions(sigs);
+            const result = trxs.map((trx, idx) => {
+                if (trx?.meta?.err != null) return {ins: ''};
+                const instruction = trx?.transaction.message.instructions[0] as PartiallyDecodedInstruction;
+                const innerIns = trx?.meta?.innerInstructions as ParsedInnerInstruction[];
+                if (!instruction || !innerIns) return {ins: ''};
+                return {
+                    sig: trx?.transaction.signatures[0],
+                    ins: instruction.data,
+                    data: innerIns[0].instructions[innerIns[0].instructions.length - 1] as ParsedInstruction,
+                    accounts: instruction.accounts,
+                    time: trx?.blockTime as number,
+                    balance_change: (trx?.meta?.preBalances[0] as number) - (trx?.meta?.postBalances[0] as number),
+                    trx: trx?.meta,
+                };
+            }).filter((value: any) => {
+                return value.ins.indexOf('3UjL') == 0 || value.ins.indexOf('kdL8') == 0;
+            }).map((value: any) => {
+                let collection = 'unknown', seller = 'unknown', mint = 'unknown';
+                if (value.ins.indexOf('kdL8') == 0) {
+                    const escrow_Add = value.accounts[3].toBase58();
+                    for (const listing of listings) {
+                        if (listing.escrowPubkey == escrow_Add) {
+                            collection = listing.collectionName;
+                            mint = listing.mintAddress;
+                            seller = listing.owner;
+                            break;
+                        }
+                    }
+                    return {
+                        sig: value.sig,
+                        type: 'offer',
+                        collection,
+                        mint,
+                        seller,
+                        bidder: value.accounts[0].toBase58(),
+                        escrow: escrow_Add,
+                        price: value.data.parsed.info.lamports / LAMPORTS_PER_SOL,
+                        time: new Date(value.time).getTime(),
+                        market: 'magiceden',
+                    }
+                }
+                const token_Add = value.data.parsed.info.account;
+                for (const listing of listings) {
+                    if (listing.id == token_Add) {
+                        collection = listing.collectionName;
+                        mint = listing.mintAddress;
+                        seller = listing.owner;
+                        break;
+                    }
+                }
+                return {
+                    sig: value.sig,
+                    type: 'sale',
+                    collection,
+                    mint,
+                    seller,
+                    buyer: value.accounts[0].toBase58(),
+                    account: token_Add,
+                    price: (value.balance_change - SOLANA_TRX_FEE) / LAMPORTS_PER_SOL,
+                    time: value.time,
+                    market: 'magiceden',
+                }
+            });
+            newActs = [];
+            newActs.push(...result.filter((res) => res.collection != 'unknown'));
+            console.dir(newActs, {depth: null});
+            console.log(`${result.length} new acts fetched`);
+            console.log('---------');
+            io.emit('new_acts', {
+                raw_tracked_counts: result.length,
+                new_actions: newActs,
+            });
+            const newListings = await getListingsMagicEden(collections);
+            listings = newListings;
+            console.log('updated listings');
+        };
+        await newTrack();
+        await new Promise((resolve, reject) => {
+            setTimeout(() => {resolve(1);
+        }, 10000)});
+    }
+}
