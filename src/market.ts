@@ -1,7 +1,7 @@
-import { Connection, LAMPORTS_PER_SOL, ParsedInnerInstruction, ParsedInstruction, PartiallyDecodedInstruction } from '@solana/web3.js';
+import { Connection, LAMPORTS_PER_SOL, ParsedInnerInstruction, ParsedInstruction, PartiallyDecodedInstruction, PublicKey } from '@solana/web3.js';
 import axios from 'axios';
 import { Server } from 'socket.io';
-import { isAttachingListener, MAGIC_EDEN_PROGRAM_PUBKEY, setAttachingListener, SOLANA_MAINNET, SOLANA_TRX_FEE } from './config/constant';
+import { collectionsForFloorPrice, floorPriceCache, isAttachingListener, MAGIC_EDEN_PROGRAM_PUBKEY, MEMO_V2_PROGRAM_PUBKEY, setAttachingListener, sleep, SOLANART_PROGRAM_PUBKEY, SOLANA_MAINNET, SOLANA_TRX_FEE, updateCollectionsForFloorPrice, updateFloorPriceCache } from './config/constant';
 import { loadDump, saveDump } from './wallet';
 
 const getHistorySolanart = (collection: string) => {
@@ -20,19 +20,29 @@ const getListingSolanart = (collection: string, page: number) => {
     });
 };
 
-const getCollectionInfoSolanart = (collection: string) => {
+const getCollectionInfoSolanart = () => {
     return new Promise((resolve) => {
-        axios.get(`https://qzlsklfacc.medianetwork.cloud/get_floor_price?collection=${collection}`).then((res) => res.data).then((res) => {
-            resolve([res.floorPrice]);
+        axios.get(`https://qzlsklfacc.medianetwork.cloud/query_volume_all`).then((res) => res.data).then((res) => {
+            resolve(res.map((info: any) => {
+                return {
+                    collection: info.collection,
+                    floorPrice: info.floorPrice,
+                }
+            }));
         }).catch(() => resolve([]));
     });
 };
 
-const getCollectionInfoMagicEden = (collection: string) => {
+const getCollectionInfoMagicEden = () => {
     return new Promise((resolve) => {
-        axios.get(`https://api-mainnet.magiceden.io/rpc/getCollectionEscrowStats/${collection}`).then((res) => res.data.results)
+        axios.get(`https://api-mainnet.magiceden.io/rpc/getAggregatedCollectionMetrics`).then((res) => res.data.results)
         .then((data: any) => {
-            resolve([data.floorPrice / LAMPORTS_PER_SOL]);
+            resolve(data.map((info: any) => {
+                return {
+                    collection: info.symbol,
+                    floorPrice: info.floorPrice.value1d,
+                };
+            }));
         }).catch(() => resolve([]));
     });
 };
@@ -52,6 +62,15 @@ const getListingMagicEden = (collection: string) => {
         .then((data: any) => {
             resolve(data);
         }).catch(() => resolve([]));
+    });
+};
+
+const getNFTInfoFromMagicEden = (nft: string) => {
+    return new Promise((resolve) => {
+        axios.get(`https://api-mainnet.magiceden.io/rpc/getNFTByMintAddress/${nft}`).then((res) => res.data.results)
+        .then((data: any) => {
+            resolve(data);
+        }).catch(() => resolve(undefined));
     });
 };
 
@@ -94,55 +113,73 @@ const getHistoryMagicEden = (collection: string) => {
     });
 }
 
-export const fetchCollectionFloorPrices = async (listings: string[]) => {
-    if (listings.length == 0) return [];
-    return new Promise ((resolve, reject) => {
-        const results: { [x: string]: {magiceden: number, solanart: number}} = {};
-        let count = 0;
-        listings.forEach((collection) => {
-            console.log(`---> Start synchronize for ${collection} from MagicEden`);
-            
-            getCollectionInfoMagicEden(collection).then((floorPrice: any) => {
-                if (!floorPrice.length) {
-                    count++;
-                    return;
-                }
-                // console.log(`${collection}: ${floorPrice[0]}`);
-                results[collection] = {
-                    ...results[collection],
-                    magiceden: floorPrice[0],
+export const getFloorPrices = (collections: string[], io: Server) => {
+    updateCollectionsForFloorPrice(collections);
+    setTimeout(() => {
+        console.log(`--> Current Fetched FloorPrices Count ${Object.keys(floorPriceCache).length}`);
+        if (Object.keys(floorPriceCache).length > 0)
+            io.emit('new_acts', collections.map((collection: string) => {
+                return {
+                    collection,
+                    ...floorPriceCache[collection],
                 };
-                count++;
-            }).catch((e) => {
-                console.log(e);
-                count++;
-            });
+            }));
+    }, 2000);
+}
 
-            getCollectionInfoSolanart(collection).then((floorPrice: any) => {
-                if (!floorPrice.length) {
-                    count++;
-                    return;
-                }
-                // console.log(`${collection}: ${floorPrice[0]}`);
-                results[collection] = {
-                    ...results[collection],
-                    solanart: floorPrice[0],
-                };
-                count++;
-            }).catch((e) => {
-                console.log(e);
-                count++;
-            });
-
-        });
-
-        const interval = setInterval(() => {
-            if (count == listings.length * 2) {
-                resolve(results);
-                clearInterval(interval);
+export const attachCollectionFloorPriceListener = async (io: Server) => {
+    const newFetch = () => {
+        let newInfo: {
+            [collection: string]: {
+                magiceden: number | undefined,
+                solanart: number | undefined,
             }
-        }, 300);
-    });
+        } = floorPriceCache;
+        console.log('--> Start fetching Magiceden FloorPrice for all collection');
+        getCollectionInfoMagicEden().then((infos: any) => {
+            if (infos.length == 0) return;
+            console.log('--> Fetched Magiceden FloorPrice for all collection');
+            infos.map((info: any) => {
+                if (newInfo[info.collection]) newInfo[info.collection].magiceden = info.floorPrice;
+                else newInfo[info.collection] = {
+                    magiceden: info.floorPrice,
+                    solanart: undefined,
+                }
+            });
+            updateFloorPriceCache(newInfo);
+            console.log(`--> Current listening Collections count ${collectionsForFloorPrice.length}`);
+            if (collectionsForFloorPrice.length > 0)
+                io.emit('new_acts', collectionsForFloorPrice.map((collection: string) => {
+                    return {
+                        collection,
+                        ...newInfo[collection],
+                    };
+                }));
+        })
+        console.log('--> Start fetching Solanart FloorPrice for all collection');
+        getCollectionInfoSolanart().then((infos: any) => {
+            if (infos.length == 0) return;
+            console.log('--> Fetched Solanart FloorPrice for all collection');
+            infos.map((info: any) => {
+                if (newInfo[info.collection]) newInfo[info.collection].solanart = info.floorPrice;
+                else newInfo[info.collection] = {
+                    solanart: info.floorPrice,
+                    magiceden: undefined,
+                }
+            });
+            updateFloorPriceCache(newInfo);
+            console.log(`--> Current listening Collections count ${collectionsForFloorPrice.length}`);
+            if (collectionsForFloorPrice.length > 0)
+                io.emit('new_acts', collectionsForFloorPrice.map((collection: string) => {
+                    return {
+                        collection,
+                        ...newInfo[collection],
+                    };
+                }));
+        })
+    };
+    newFetch();
+    const interval = setInterval(newFetch, 40000);
 }
 
 export const checkNewOffers = (listings: string[]) => {
@@ -344,22 +381,22 @@ export const checkNewSales = (listings: string[]) => {
     })
 };
 
-const getListingsMagicEden = (collections: string[]) => {
+const getListingsMagicEden = (nfts: string[]) => {
     return new Promise((resolve, reject) => {
         let result = [] as any, count = 0;
-        collections.forEach((collection) => {
-            getListingMagicEden(collection).then((res: any) => {
-                if (!res.length){
+        nfts.forEach((nft) => {
+            getNFTInfoFromMagicEden(nft).then((res: any) => {
+                if (!res){
                     return;
                 }
-                result.push(...res);
+                result.push(res);
             }).catch((e) => {
             }).finally(() => {
                 count++;
             })
         })
         const itvl = setInterval(() => {
-            if (count == collections.length) {
+            if (count == nfts.length) {
                 resolve(result);
                 clearInterval(itvl);
             }
@@ -367,21 +404,61 @@ const getListingsMagicEden = (collections: string[]) => {
     });
 }
 
-export const attachMarketEventListener = async (collections: string[], io: Server) => {
+export const addNftListener = async (nfts: string[], offer: boolean, sale: boolean) => {
+    if (nfts.length == 0 || (!offer && !sale)) return;
+    let listings = [] as any, attachList = nfts.map((nft: string) => {
+        return {
+            mint: nft,
+            token_Add: '',
+            escrow_Add: '',
+        };
+    });
+    listings = await getListingsMagicEden(nfts);
+    if (listings.length > 0) {
+         for (const listing of listings) {
+             for (let idx = 0; idx < attachList.length; idx++) {
+                if (attachList[idx].mint == listing.mintAddress) {
+                    attachList[idx].token_Add = listing.id;
+                    attachList[idx].escrow_Add = listing.escrowPubkey;
+                    break;
+                }
+             }
+         }
+    }
+    if (offer)
+        setAttachingListener([...isAttachingListener, ...attachList.map((nft: any) => ({
+            ...nft,
+            event: 'offer',
+        }))]);
+    if (sale)
+        setAttachingListener([...isAttachingListener, ...attachList.map((nft: any) => ({
+            ...nft,
+            event: 'sale',
+        }))]);
+}
+
+export const attachMarketEventListener = async (nfts: string[], io: Server) => {
     const connection = new Connection(SOLANA_MAINNET, "confirmed");
-    let related_sigs: any = [], listings = [] as any, newActs = [] as any;
+    let me_related_sigs: any = [], sn_related_sigs: any = [], newActs = [] as any;
+    
+    await addNftListener(nfts, true, true);
+    console.dir(isAttachingListener);
     connection.onLogs(MAGIC_EDEN_PROGRAM_PUBKEY, async (logs, ctx) => {
-        related_sigs.push(logs.signature);
+        me_related_sigs.push(logs.signature);
+    });
+    
+    connection.onLogs(SOLANART_PROGRAM_PUBKEY, async (logs, ctx) => {
+        if (logs.logs.indexOf('Program log: Instruction: CreateOffer') != -1 || logs.logs.indexOf('Program log: Instruction: Sell ') != -1)
+            sn_related_sigs.push(logs.signature);
     });
 
-    listings = await getListingsMagicEden(collections);
-    setAttachingListener(true);
+    while (isAttachingListener.length != 0) {
+        newActs = [];
 
-    while (isAttachingListener) {
-        const newTrack = async () => {
-            if (related_sigs.length == 0) return;
-            const sigs = related_sigs;
-            related_sigs = [];
+        const newMETrack = async () => {
+            if (me_related_sigs.length == 0) return;
+            const sigs = me_related_sigs;
+            me_related_sigs = [];
             const trxs = await connection.getParsedConfirmedTransactions(sigs);
             const result = trxs.map((trx, idx) => {
                 if (trx?.meta?.err != null) return {ins: ''};
@@ -400,23 +477,19 @@ export const attachMarketEventListener = async (collections: string[], io: Serve
             }).filter((value: any) => {
                 return value.ins.indexOf('3UjL') == 0 || value.ins.indexOf('kdL8') == 0;
             }).map((value: any) => {
-                let collection = 'unknown', seller = 'unknown', mint = 'unknown';
+                let mint = 'unknown';
                 if (value.ins.indexOf('kdL8') == 0) {
                     const escrow_Add = value.accounts[3].toBase58();
-                    for (const listing of listings) {
-                        if (listing.escrowPubkey == escrow_Add) {
-                            collection = listing.collectionName;
-                            mint = listing.mintAddress;
-                            seller = listing.owner;
+                    for (const listing of isAttachingListener) {
+                        if (listing.escrow_Add == escrow_Add) {
+                            if (listing.event == 'offer') mint = listing.mint;
                             break;
                         }
                     }
                     return {
                         sig: value.sig,
                         type: 'offer',
-                        collection,
                         mint,
-                        seller,
                         bidder: value.accounts[0].toBase58(),
                         escrow: escrow_Add,
                         price: value.data.parsed.info.lamports / LAMPORTS_PER_SOL,
@@ -425,20 +498,16 @@ export const attachMarketEventListener = async (collections: string[], io: Serve
                     }
                 }
                 const token_Add = value.data.parsed.info.account;
-                for (const listing of listings) {
-                    if (listing.id == token_Add) {
-                        collection = listing.collectionName;
-                        mint = listing.mintAddress;
-                        seller = listing.owner;
+                for (const listing of isAttachingListener) {
+                    if (listing.token_Add == token_Add) {
+                        if (listing.event == 'sale') mint = listing.mint;
                         break;
                     }
                 }
                 return {
                     sig: value.sig,
                     type: 'sale',
-                    collection,
                     mint,
-                    seller,
                     buyer: value.accounts[0].toBase58(),
                     account: token_Add,
                     price: (value.balance_change - SOLANA_TRX_FEE) / LAMPORTS_PER_SOL,
@@ -446,22 +515,74 @@ export const attachMarketEventListener = async (collections: string[], io: Serve
                     market: 'magiceden',
                 }
             });
-            newActs = [];
-            newActs.push(...result.filter((res) => res.collection != 'unknown'));
-            console.dir(newActs, {depth: null});
-            console.log(`${result.length} new acts fetched`);
-            console.log('---------');
-            io.emit('new_acts', {
-                raw_tracked_counts: result.length,
-                new_actions: newActs,
-            });
-            const newListings = await getListingsMagicEden(collections);
-            listings = newListings;
-            console.log('updated listings');
+            newActs.push(...result.filter((res) => res.mint != 'unknown'));
+            console.log(`${result.length} new acts fetched from magiceden`);
         };
-        await newTrack();
-        await new Promise((resolve, reject) => {
-            setTimeout(() => {resolve(1);
-        }, 10000)});
+
+        await newMETrack();
+        await sleep(5000);
+
+        const newSNTrack = async () => {
+            if (sn_related_sigs.length == 0) return;
+            const sigs = sn_related_sigs;
+            sn_related_sigs = [];
+            const trxs = await connection.getParsedConfirmedTransactions(sigs);
+            const result = trxs.map((trx, idx) => {
+                if (trx?.meta?.err != null) return {ins: ''};
+                const ins_cnt = trx?.transaction.message.instructions.length as number;
+                const ins = trx?.transaction.message.instructions[ins_cnt - 1] as any;
+                if (ins.programId.toString() == MEMO_V2_PROGRAM_PUBKEY.toBase58()) {
+                    const info = JSON.parse(ins.parsed);
+                    let mint = 'unknown';
+                    for (const listing of isAttachingListener) {
+                        if (listing.mint == info.token_add) {
+                            mint = info.token_add;
+                            break;
+                        }
+                    }
+                    return {
+                        sig: trx?.transaction.signatures[0],
+                        type: 'sale',
+                        mint,
+                        price: info.price_sol,
+                        buyer: trx?.transaction.message.accountKeys[0].pubkey.toBase58(),
+                        time: trx?.blockTime as number,
+                        market: 'solanart',
+                    };    
+                } else {
+                    const innerIns = trx?.meta?.innerInstructions as ParsedInnerInstruction[];
+                    const instruction = innerIns[innerIns.length - 1].instructions as ParsedInstruction[];
+                    const price = instruction[instruction.length - 1].parsed.info.lamports / LAMPORTS_PER_SOL;
+                    const token = (ins as PartiallyDecodedInstruction).accounts[4].toBase58();
+                    let mint = 'unknown';
+                    for (const listing of isAttachingListener) {
+                        if (listing.mint == token) {
+                            mint = token;
+                            break;
+                        }
+                    }
+                    return {
+                        sig: trx?.transaction.signatures[0],
+                        type: 'offer',
+                        mint,
+                        price,
+                        offer: trx?.transaction.message.accountKeys[0].pubkey.toBase58(),
+                        time: trx?.blockTime as number,
+                        market: 'solanart',
+                    };    
+                }
+            });
+            newActs.push(...result.filter((res) => res.mint != 'unknown'));
+            console.log(`${result.length} new acts fetched from solanart`);
+        };
+        await newSNTrack();
+
+        console.dir(newActs, {depth: null});
+        console.log('---------');
+        io.emit('new_acts', {
+            new_actions: newActs,
+        });
+
+        await sleep(3000);
     }
 }

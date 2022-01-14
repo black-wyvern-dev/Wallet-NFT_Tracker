@@ -4,8 +4,8 @@ import cors from 'cors';
 import fs from 'fs';
 import { Server } from 'socket.io';
 import { fetchWalletForNFTs, getTransactionData } from './wallet';
-import { fetchCollectionFloorPrices, checkNewSales, checkNewOffers, attachMarketEventListener} from './market';
-import { setAttachingListener } from './config/constant';
+import { attachCollectionFloorPriceListener, checkNewSales, checkNewOffers, attachMarketEventListener, addNftListener, getFloorPrices} from './market';
+import { isAttachingListener, setAttachingListener, updateCollectionsForFloorPrice } from './config/constant';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -56,65 +56,63 @@ app.get('/get_floor_price', async (req, res) => {
     res.send([]);
     return;
   }
-  fetchCollectionFloorPrices(collections).then((result) => {
-    console.log('---------');
-    console.dir(result, {depth: null});
-    res.send(result);
-  });
-});
-
-app.get('/check_new_sales', async (req, res) => {
-  const collections = (req.query.collections as string).split(',');
-  console.log(`Request check new sales`);
-  console.log(collections);
-  if (collections.length == 0) {
-    res.send([]);
-    return;
-  }
-  checkNewSales(collections).then((result) => {
-    console.log('---------');
-    console.dir(result, {depth: null});
-    res.send(result);
-  });
-});
-
-app.get('/check_new_offers', async (req, res) => {
-  const collections = (req.query.collections as string).split(',');
-  console.log(`Request check new offers`);
-  console.log(collections);
-  if (collections.length == 0) {
-    res.send([]);
-    return;
-  }
-  checkNewOffers(collections).then((result) => {
-    console.log('---------');
-    console.dir(result, {depth: null});
-    res.send(result);
-  });
+  getFloorPrices(collections, io);
+  res.writeHead(200, {'Content-Type': 'text/html'});
+  res.end(index);
 });
 
 app.get('/clear_all_attach', (req, res) => {
-  setAttachingListener(false);
+  updateCollectionsForFloorPrice([]);
+  setAttachingListener([]);
   console.log('Cleared all attach listeners');
   io.emit('msg', 'Cleared all attach listeners');
   res.send('Cleared all');
 })
 
-app.get('/set_magiceden_attach', (req, res) => {
-  const collections = (req.query.collections as string).split(',');
-  console.log(`Request magiceden listener attach`);
-  console.log(collections);
-  if (collections.length == 0) {
+app.get('/set_offer_alert', (req, res) => {
+  const nfts = (req.query.mint as string).split(',');
+  console.log(`Request offer listener attach`);
+  console.log(nfts);
+  if (nfts.length == 0) {
     res.writeHead(200, {'Content-Type': 'text/html'});
     res.end(index);
     return;
   }
-  setAttachingListener(false);
-  io.emit('msg', `New magiceden listeners attached: ${JSON.stringify(collections)}`);
-  attachMarketEventListener(collections, io);
+  io.emit('msg', `New offer listeners attached: ${JSON.stringify(nfts)}`);
+  if (isAttachingListener.length == 0) {
+    addNftListener(nfts, true, false).then(() => {
+      attachMarketEventListener([], io);
+    });
+  }
+  else {
+    addNftListener(nfts, true, false);
+  }
   res.writeHead(200, {'Content-Type': 'text/html'});
   res.end(index);
 })
+
+app.get('/set_sale_alert', (req, res) => {
+  const nfts = (req.query.mint as string).split(',');
+  console.log(`Request sale listener attach`);
+  console.log(nfts);
+  if (nfts.length == 0) {
+    res.writeHead(200, {'Content-Type': 'text/html'});
+    res.end(index);
+    return;
+  }
+  io.emit('msg', `New sale listeners attached: ${JSON.stringify(nfts)}`);
+  if (isAttachingListener.length == 0) {
+    addNftListener(nfts, false, true).then(() => {
+      attachMarketEventListener([], io);
+    });
+  }
+  else {
+    addNftListener(nfts, false, true);
+  }
+  res.writeHead(200, {'Content-Type': 'text/html'});
+  res.end(index);
+})
+
 
 io.on('connection', async (socket) => {
   console.log("New Connection Established");
@@ -126,6 +124,6 @@ io.on('connection', async (socket) => {
 
 server.listen(port, () => {
   console.log(`server is listening on ${port}`);
-  // attachMarketEventListener(['monkeyball']);
+  attachCollectionFloorPriceListener(io);
   return ;
 });
