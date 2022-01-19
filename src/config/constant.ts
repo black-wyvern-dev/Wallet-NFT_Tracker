@@ -41,8 +41,22 @@ export let floorPriceCache: {
     }
 } = {};
 
-export let updateFloorPriceCache = (newInfo: any) => {
+export const updateFloorPriceCache = (newInfo: any) => {
     floorPriceCache = newInfo;
+}
+
+export interface ListingStatus {
+    [mint: string]: {
+        type: 'initializeEscrow' | 'cancelEscrow',
+        price?: number,
+        last_update_time: number,
+    },
+};
+
+export let listingStatus: ListingStatus = {};
+
+export const updatelistingStatus = (newInfo: ListingStatus) => {
+    listingStatus = newInfo;
 }
 
 export let collectionsForFloorPrice: string[] = [];

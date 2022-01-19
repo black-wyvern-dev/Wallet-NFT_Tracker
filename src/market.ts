@@ -1,7 +1,7 @@
 import { Connection, LAMPORTS_PER_SOL, ParsedInnerInstruction, ParsedInstruction, PartiallyDecodedInstruction, PublicKey } from '@solana/web3.js';
 import axios from 'axios';
 import { Server } from 'socket.io';
-import { collectionsForFloorPrice, floorPriceCache, isAttachingListener, MAGIC_EDEN_PROGRAM_PUBKEY, MEMO_V2_PROGRAM_PUBKEY, setAttachingListener, sleep, SOLANART_PROGRAM_PUBKEY, SOLANA_MAINNET, SOLANA_TRX_FEE, updateCollectionsForFloorPrice, updateFloorPriceCache } from './config/constant';
+import { collectionsForFloorPrice, floorPriceCache, isAttachingListener, listingStatus, ListingStatus, MAGIC_EDEN_PROGRAM_PUBKEY, MEMO_V2_PROGRAM_PUBKEY, setAttachingListener, sleep, SOLANART_PROGRAM_PUBKEY, SOLANA_MAINNET, SOLANA_TRX_FEE, updateCollectionsForFloorPrice, updateFloorPriceCache, updatelistingStatus } from './config/constant';
 import { loadDump, saveDump } from './wallet';
 
 const getHistorySolanart = (collection: string) => {
@@ -33,17 +33,36 @@ const getCollectionInfoSolanart = () => {
     });
 };
 
-const getCollectionInfoMagicEden = () => {
-    return new Promise((resolve) => {
-        axios.get(`https://api-mainnet.magiceden.io/rpc/getAggregatedCollectionMetrics`).then((res) => res.data.results)
-        .then((data: any) => {
-            resolve(data.map((info: any) => {
-                return {
-                    collection: info.symbol,
-                    floorPrice: info.floorPrice.value1d,
-                };
-            }));
-        }).catch(() => resolve([]));
+const getCollectionInfoMagicEden = (last_time: number, listing: boolean) => {
+    return new Promise(async (resolve) => {
+        try {
+            const query = decodeURI(escape(JSON.stringify({
+                $match: {
+                    txType: listing ? 'initializeEscrow' : 'cancelEscrow',
+                    blockTime: {$gt: last_time},
+                },
+                $sort: {
+                    blockTime: -1
+                },
+                // $skip: 0,
+                // $limit: 1000,
+            })));
+            axios.get(`https://api-mainnet.magiceden.io/rpc/getGlobalActivitiesByQuery?q=${query}`).then((res) => res.data)
+            .then((res) => {
+                resolve (res.results.map((result: any) => {
+                    return {
+                        ...result.parsedList,
+                        ...result.parsedUnlist,
+                        // sig: result.transaction_id,
+                        // source: result.source,
+                        // time: result.createdAt,
+                        blockTime: result.blockTime,
+                    }
+                }));
+            }).catch(() => resolve([]));
+        } catch (e) {
+            resolve([]);
+        }
     });
 };
 
@@ -62,6 +81,51 @@ const getListingMagicEden = (collection: string) => {
         .then((data: any) => {
             resolve(data);
         }).catch(() => resolve([]));
+    });
+};
+
+const getAllListingMagicEden = () => {
+    return new Promise((resolve) => {
+        axios.get(`https://api-mainnet.magiceden.io/all_collections`).then((reply) => reply.data).then(async (reply) => {
+            const collections = reply.collections.map((collection: any) => collection.symbol);
+            console.log(`  -> ${collections.length} collections are fetched`);
+            // collections.map((collection: string) => saveDump(`/magiceden/${collection}.json`, {}));
+            // let subNames = [];
+            for (let i = 0; i < collections.length; i++) {
+                let name = collections[i];
+                // let newInfo = loadDump(`/magiceden/${name}.json`);
+                // if (!newInfo) newInfo = {};
+
+                // await Promise.allSettled(
+                //     subNames.map(async (name: any) => {
+                        const start_time = Math.floor(Date.now() / 1000);
+                        try {
+                            const data: any = await getListingMagicEden(name);//.then((data: any) => {
+                                const reply = loadDump(`/magiceden/${name}.json`);
+                                let result = !reply ? {} : reply;
+                                for (const nft of data) {
+                                    if (!result[nft.mintAddress] || result[nft.mintAddress].last_update_time < start_time)
+                                    result[nft.mintAddress] = {
+                                        type: 'initializeEscrow',
+                                        price: nft.price,
+                                        last_update_time: start_time,
+                                    }
+                                };
+                                console.log(`     ${i}: ${data.length} nfts for ${name} collection from MagicEden`);
+                            saveDump(`/magiceden/${name}.json`, result);
+                        } catch (e) {
+                            console.log(`     ${i}: error for ${name} collection from MagicEden`);
+                        };
+                //     })
+                // );
+                await sleep(5000);
+            }
+            console.log('--> Fetched all NFTs from MagicEden');
+            resolve([]);
+        }).catch(() => {
+            console.log(`Couldn't get all collection names from MagicEden`);
+            resolve([]);
+        });
     });
 };
 
@@ -117,69 +181,143 @@ export const getFloorPrices = (collections: string[], io: Server) => {
     updateCollectionsForFloorPrice(collections);
     setTimeout(() => {
         console.log(`--> Current Fetched FloorPrices Count ${Object.keys(floorPriceCache).length}`);
-        if (Object.keys(floorPriceCache).length > 0)
-            io.emit('new_acts', collections.map((collection: string) => {
-                return {
-                    collection,
-                    ...floorPriceCache[collection],
-                };
-            }));
+            io.emit('new_acts', getFloorPricesFromDump(collections));
     }, 2000);
 }
 
-export const attachCollectionFloorPriceListener = async (io: Server) => {
-    const newFetch = () => {
-        let newInfo: {
-            [collection: string]: {
-                magiceden: number | undefined,
-                solanart: number | undefined,
+const getFloorPricesFromDump = (collections: string[]) => {
+    let solanartInfos = loadDump(`/solanart/floor_prices.json`);
+    if (!solanartInfos) solanartInfos = {};
+
+    return collections.map((collection: string) => {
+        let floorPrice = {
+            magiceden: undefined,
+            solanart: solanartInfos[collection] ? solanartInfos[collection].price : undefined,
+        } as any;
+        const result: ListingStatus = loadDump(`/magiceden/${collection}.json`);
+        if (result)
+            for (let key of Object.keys(result)) {
+                if (result[key].type == 'cancelEscrow' || result[key].price == undefined) continue;
+                if (!floorPrice.magiceden || floorPrice.magiceden > (result[key].price ?? 0) ) floorPrice.magiceden = result[key].price;
             }
-        } = floorPriceCache;
-        console.log('--> Start fetching Magiceden FloorPrice for all collection');
-        getCollectionInfoMagicEden().then((infos: any) => {
-            if (infos.length == 0) return;
-            console.log('--> Fetched Magiceden FloorPrice for all collection');
-            infos.map((info: any) => {
-                if (newInfo[info.collection]) newInfo[info.collection].magiceden = info.floorPrice;
-                else newInfo[info.collection] = {
-                    magiceden: info.floorPrice,
-                    solanart: undefined,
-                }
-            });
-            updateFloorPriceCache(newInfo);
-            console.log(`--> Current listening Collections count ${collectionsForFloorPrice.length}`);
-            if (collectionsForFloorPrice.length > 0)
-                io.emit('new_acts', collectionsForFloorPrice.map((collection: string) => {
-                    return {
-                        collection,
-                        ...newInfo[collection],
-                    };
-                }));
-        })
+        return {
+            collection,
+            ...floorPrice,
+        };
+    })
+}
+
+const updateCollectionsInfoSolanart = async () => {
+    console.log('--> Start fetching Solanart collections for floorPrice');
+    await getCollectionInfoSolanart().then((infos: any) => {
+        if (infos.length == 0) return;
+        let newInfos = loadDump(`/solanart/floor_prices.json`);
+        if (!newInfos) newInfos = {};
+        // let newInfo = floorPriceCache;
+        infos.map((info: any) => {
+            // if (newInfo[info.collection]) newInfo[info.collection].solanart = info.floorPrice;
+            // else newInfo[info.collection] = {
+            //     solanart: info.floorPrice,
+            //     magiceden: undefined,
+            // }
+            if (!newInfos || !newInfos[info.collection]) newInfos[info.collection] = {
+                price: info.floorPrice,
+                last_updated: Math.floor(Date.now() / 1000),
+            };
+        });
+        console.log(`--> Fetched ${Object.keys(newInfos).length} Solanart collections for floorPrice`);
+        saveDump(`/solanart/floor_prices.json`, newInfos);
+        // updateFloorPriceCache(newInfo);
+    })
+}
+
+const updateSolanartFloorPrices = async () => {
+    return new Promise(async (resolve, reject) => {
         console.log('--> Start fetching Solanart FloorPrice for all collection');
-        getCollectionInfoSolanart().then((infos: any) => {
-            if (infos.length == 0) return;
-            console.log('--> Fetched Solanart FloorPrice for all collection');
-            infos.map((info: any) => {
-                if (newInfo[info.collection]) newInfo[info.collection].solanart = info.floorPrice;
-                else newInfo[info.collection] = {
-                    solanart: info.floorPrice,
-                    magiceden: undefined,
+        let newInfos = loadDump(`/solanart/floor_prices.json`), i = 0, start_time = Math.floor(Date.now() / 1000);
+        if (!newInfos) newInfos = {};
+        for (const name of Object.keys(newInfos)) {
+            if (start_time - 60 < newInfos[name].last_updated) {
+                i++;
+                continue;
+            }
+            axios.get(`https://qzlsklfacc.medianetwork.cloud/get_floor_price?collection=${name}`).then(res => res.data).then(data => {
+                if (!data) return;
+                newInfos[name] = {
+                    price: data.floorPrice,
+                    last_updated: Math.floor(Date.now() / 1000),
+                };
+                saveDump(`/solanart/floor_prices.json`, newInfos);
+                i++;
+                // console.log(`  ${i++}: updated ${name}`);
+            }).catch((e) => {
+                i++;
+                // console.log(`  ${i++}: error ${name}`);
+            }).finally(() => {
+                if (i == Object.keys(newInfos).length) {
+                    console.log('--> Fetched Solanart FloorPrice for all collection');
+                    resolve(true);
                 }
             });
-            updateFloorPriceCache(newInfo);
+            await sleep(100);
+        }
+    })
+};
+
+export const attachCollectionFloorPriceListener = async (io: Server) => {
+    let listing = true;
+    let lastTime = Math.floor(Date.now() / 1000) - 60;
+    
+    await updateCollectionsInfoSolanart();
+    
+    console.log('--> Start getting current NFTs from MagicEden');
+    getAllListingMagicEden();
+    
+    const newFetch = async () => {
+        if (!listing) {
+            if (Date.now() % 3600 < 60) await updateCollectionsInfoSolanart();
+            await updateSolanartFloorPrices();
+        }
+
+        console.log('--> Start fetching new Listing from Magiceden for FloorPrice');
+        getCollectionInfoMagicEden(lastTime, listing).then((infos: any) => {
+            if (infos.length == 0) return;
+            console.log(`--> Fetched ${infos.length} new Listing from Magiceden for FloorPrice`);
+            infos.map((info: {
+                TxType: 'initializeEscrow' | 'cancelEscrow',
+                amount?: number,
+                collection_symbol: string,
+                mint: string,
+                blockTime: number,
+             }) => {
+                const dumpInfo = loadDump(`/magiceden/${info.collection_symbol}.json`);
+                let newStatus: any = {};
+                newStatus[info.mint] = {
+                    type: info.TxType,
+                    price: info.TxType == 'cancelEscrow' ? undefined : (info.amount ?? 0) / LAMPORTS_PER_SOL,
+                    last_update_time: info.blockTime,
+                }
+                if (!dumpInfo) {
+                    saveDump(`/magiceden/${info.collection_symbol}.json`, newStatus);
+                } else {
+                    let newInfo: ListingStatus =  dumpInfo;
+                    if (!newInfo[info.mint]) newInfo[info.mint] = newStatus[info.mint];
+                    else {
+                        if (newInfo[info.mint].last_update_time < newStatus[info.mint].last_update_time) newInfo[info.mint] = newStatus[info.mint];
+                    }
+                    saveDump(`/magiceden/${info.collection_symbol}.json`, newInfo);
+                }
+            });
             console.log(`--> Current listening Collections count ${collectionsForFloorPrice.length}`);
             if (collectionsForFloorPrice.length > 0)
-                io.emit('new_acts', collectionsForFloorPrice.map((collection: string) => {
-                    return {
-                        collection,
-                        ...newInfo[collection],
-                    };
-                }));
+                io.emit('new_acts', getFloorPricesFromDump(collectionsForFloorPrice));
         })
+
+        lastTime += 30;
+        listing = !listing;
     };
     newFetch();
-    const interval = setInterval(newFetch, 40000);
+    const interval = setInterval(newFetch, 30000);
 }
 
 export const checkNewOffers = (listings: string[]) => {
