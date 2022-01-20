@@ -45,7 +45,7 @@ const getCollectionInfoMagicEden = (last_time: number, listing: boolean) => {
                     blockTime: -1
                 },
                 // $skip: 0,
-                // $limit: 1000,
+                // $limit: 30,
             })));
             axios.get(`https://api-mainnet.magiceden.io/rpc/getGlobalActivitiesByQuery?q=${query}`).then((res) => res.data)
             .then((res) => {
@@ -54,6 +54,7 @@ const getCollectionInfoMagicEden = (last_time: number, listing: boolean) => {
                         ...result.parsedList,
                         ...result.parsedUnlist,
                         // sig: result.transaction_id,
+                        // slot: result.slot,
                         // source: result.source,
                         // time: result.createdAt,
                         blockTime: result.blockTime,
@@ -61,6 +62,7 @@ const getCollectionInfoMagicEden = (last_time: number, listing: boolean) => {
                 }));
             }).catch(() => resolve([]));
         } catch (e) {
+            console.log('--> Error fetching new Listing from MagicEden ', (new Date(last_time * 1000)).toLocaleString());
             resolve([]);
         }
     });
@@ -84,54 +86,66 @@ const getListingMagicEden = (collection: string) => {
     });
 };
 
+const getFloorPricesMagicEden = async (collections?: string[]) => {
+    if (!collections || collections.length == 0) {
+        return [];
+    }
+    return new Promise(async (resolve, reject) => {
+        let cnt = 1, result: any[] = [];
+        await Promise.allSettled(
+            collections.map(async (name: any) => {
+                try {
+                    const ret: any = await axios.get(`https://api-mainnet.magiceden.io/rpc/getCollectionEscrowStats/${name}`);
+                    // console.log(`   ${cnt++}: FloorPrice ${ret.data.results.floorPrice / LAMPORTS_PER_SOL} ${name} from Magiceden`);
+                    result.push({
+                        collection: name,
+                        price: ret.data.results.floorPrice / LAMPORTS_PER_SOL,
+                    })
+                    cnt++;
+                } catch (e) {
+                    console.log(`   ${cnt++}: Error get floorPrice  ${name} from Magiceden`);
+                }
+            })
+        );
+        resolve(result);
+    });
+}
+
 const getAllListingMagicEden = () => {
     return new Promise((resolve) => {
         axios.get(`https://api-mainnet.magiceden.io/all_collections`).then((reply) => reply.data).then(async (reply) => {
             const collections = reply.collections.map((collection: any) => collection.symbol);
-            console.log(`  -> ${collections.length} collections are fetched `, Date.now() / 1000);
-            // collections.map((collection: string) => saveDump(`/magiceden/${collection}.json`, {}));
-            await sleep(100);
-            let subNames = [];
+            console.log(`  -> ${collections.length} collections are fetched`);
             for (let i = 0; i < collections.length; i++) {
                 let name = collections[i];
-                // let newInfo = loadDump(`/magiceden/${name}.json`);
-                // if (!newInfo) newInfo = {};
-                // if (i < collections.length - 1 && subNames.length < 50 ) {
-                //     subNames.push(collections[i]);
-                //     continue;
-                // }
-
                 // await Promise.allSettled(
                 //     subNames.map(async (name: any) => {
-
-                        // const start_time = Math.floor(Date.now() / 1000);
-                        try {
-                        //     const data: any = await getListingMagicEden(name);//.then((data: any) => {
-                        //         const reply = loadDump(`/magiceden/${name}.json`);
-                        //         let result = !reply ? {} : reply;
-                        //         for (const nft of data) {
-                        //             if (!result[nft.mintAddress] || result[nft.mintAddress].last_update_time < start_time)
-                        //             result[nft.mintAddress] = {
-                        //                 type: 'initializeEscrow',
-                        //                 price: nft.price,
-                        //                 last_update_time: start_time,
-                        //             }
-                        //         };
-                            const data: any = await axios.get(`https://api-mainnet.magiceden.io/rpc/getCollectionEscrowStats/${name}`);
-                            console.log(`     ${i}: ${data.results.floorPrice} nfts for ${name} collection from MagicEden`);
-                        //     saveDump(`/magiceden/${name}.json`, result);
-                        } catch (e) {
-                            console.log(`     ${i}: error for ${name} collection from MagicEden`);
-                        };
+                        const start_time = Math.floor(Date.now() / 1000);
+                        // try {
+                            const data: any = await getFloorPricesMagicEden([name]);
+                            if (data.length == 0) {
+                                console.log(`     ${i+1}: error all fetching for ${name} collection from MagicEden`);
+                                continue;
+                            }
+                            const reply = loadDump(`/magiceden/floor_prices.json`);
+                            let result = !reply ? {} : reply;
+                            if (!result[data[0].collection] || result[data[0].collection].last_update_time < start_time)
+                                result[data[0].collection] = {
+                                    price: data[0].price,
+                                    last_updated: start_time,
+                                }
+                            saveDump(`/magiceden/floor_prices.json`, result);
+                            console.log(`     ${i+1}: all fetching ${data[0].price}: ${name} collection from MagicEden`);
+                        // } catch (e) {
+                            // console.log(`     ${i+1}: error all fetching for ${name} collection from MagicEden`);
+                        // };
                 //     })
                 // );
-                // await sleep(1000);
-                console.log(`   Fetched ${i} collections from MagicEden `, Date.now() / 1000);
+                await sleep(200);
             }
-            // console.log('--> Fetched all NFTs from MagicEden');
+            console.log('--> Fetched all NFTs from MagicEden');
             resolve([]);
         }).catch(() => {
-            console.log(`Couldn't get all collection names from MagicEden`);
             resolve([]);
         });
     });
@@ -195,19 +209,15 @@ export const getFloorPrices = (collections: string[], io: Server) => {
 
 const getFloorPricesFromDump = (collections: string[]) => {
     let solanartInfos = loadDump(`/solanart/floor_prices.json`);
+    let magicedenInfos = loadDump(`/magiceden/floor_prices.json`);
     if (!solanartInfos) solanartInfos = {};
+    if (!magicedenInfos) magicedenInfos = {};
 
     return collections.map((collection: string) => {
         let floorPrice = {
-            magiceden: undefined,
-            solanart: solanartInfos[collection] ? solanartInfos[collection].price : undefined,
+            magiceden: magicedenInfos[collection] ? {price: magicedenInfos[collection].price, updated_time: (new Date(magicedenInfos[collection].last_updated * 1000)).toLocaleString()} : undefined,
+            solanart: solanartInfos[collection] ? {price: solanartInfos[collection].price, updated_time: (new Date(solanartInfos[collection].last_updated * 1000)).toLocaleString()} : undefined,
         } as any;
-        const result: ListingStatus = loadDump(`/magiceden/${collection}.json`);
-        if (result)
-            for (let key of Object.keys(result)) {
-                if (result[key].type == 'cancelEscrow' || result[key].price == undefined) continue;
-                if (!floorPrice.magiceden || floorPrice.magiceden > (result[key].price ?? 0) ) floorPrice.magiceden = result[key].price;
-            }
         return {
             collection,
             ...floorPrice,
@@ -274,59 +284,63 @@ const updateSolanartFloorPrices = async () => {
 
 export const attachCollectionFloorPriceListener = async (io: Server) => {
     let listing = true;
-    let lastTime = Math.floor(Date.now() / 1000);
+    let lastTime = Math.floor(Date.now() / 1000) - 100;
     
-    // await updateCollectionsInfoSolanart();
+    await updateCollectionsInfoSolanart();
     
-    console.log('--> Start getting current NFTs from MagicEden', (new Date()).toLocaleString());
+    console.log('--> Start getting current NFTs from MagicEden');
     await getAllListingMagicEden();
-    console.log('--> Finish getting current NFTs from MagicEden ', Math.floor(Date.now() / 1000) - lastTime, (new Date()).toLocaleString());
     
     const newFetch = async () => {
-        // if (!listing) {
-        //     if (Date.now() % 3600 < 60) await updateCollectionsInfoSolanart();
-        //     await updateSolanartFloorPrices();
-        // }
-
-        console.log('--> Start fetching new Listing from Magiceden for FloorPrice');
+        if (!listing) {
+            if (Date.now() % 3600 < 60) await updateCollectionsInfoSolanart();
+            await updateSolanartFloorPrices();
+        }
+        console.log('--> Start fetching new Listing from Magiceden for FloorPrice: ', (new Date()).toLocaleString());
         getCollectionInfoMagicEden(lastTime, listing).then((infos: any) => {
-            if (infos.length == 0) return;
             console.log(`--> Fetched ${infos.length} new Listing from Magiceden for FloorPrice`);
-            infos.map((info: {
-                TxType: 'initializeEscrow' | 'cancelEscrow',
-                amount?: number,
-                collection_symbol: string,
-                mint: string,
-                blockTime: number,
-             }) => {
-                const dumpInfo = loadDump(`/magiceden/${info.collection_symbol}.json`);
-                let newStatus: any = {};
-                newStatus[info.mint] = {
-                    type: info.TxType,
-                    price: info.TxType == 'cancelEscrow' ? undefined : (info.amount ?? 0) / LAMPORTS_PER_SOL,
-                    last_update_time: info.blockTime,
-                }
+            if (infos.length == 0) return;
+            console.log('  -> Start fetching updated floorPrices from Magiceden: ', (new Date()).toLocaleString());
+            const names = infos.map((info: any) => info.collection_symbol), updated_time = Math.floor(Date.now() / 1000);//infos[0].blockTime;
+            getFloorPricesMagicEden(names.filter((elem: string, pos: number) => {
+                return names.indexOf(elem) == pos;
+            })).then((results: any) => {
+                if (!results || results.length == 0) return;
+                const dumpInfo = loadDump(`/magiceden/floor_prices.json`);
                 if (!dumpInfo) {
-                    saveDump(`/magiceden/${info.collection_symbol}.json`, newStatus);
-                } else {
-                    let newInfo: ListingStatus =  dumpInfo;
-                    if (!newInfo[info.mint]) newInfo[info.mint] = newStatus[info.mint];
-                    else {
-                        if (newInfo[info.mint].last_update_time < newStatus[info.mint].last_update_time) newInfo[info.mint] = newStatus[info.mint];
+                    let newInfo = {} as any;
+                    for (const info of results) newInfo[info.collection] = {
+                        price: info.price,
+                        last_updated: updated_time,
                     }
-                    saveDump(`/magiceden/${info.collection_symbol}.json`, newInfo);
+                    saveDump(`/magiceden/floor_prices.json`, newInfo);
+                } else {
+                    let newInfo: {
+                        [collection: string]: {
+                            price: number,
+                            last_updated: number,
+                        }
+                    } =  dumpInfo;
+                    for (const result of results) {
+                        if (!newInfo[result.collection] || newInfo[result.collection].last_updated < updated_time) newInfo[result.collection] = {
+                            price: result.price,
+                            last_updated: updated_time,
+                        };
+                    }
+                    saveDump(`/magiceden/floor_prices.json`, newInfo);
                 }
+                console.log('  -> Fetched updated floorPrices from Magiceden: ', (new Date()).toLocaleString());
             });
-            // console.log(`--> Current listening Collections count ${collectionsForFloorPrice.length}`);
-            // if (collectionsForFloorPrice.length > 0)
-            //     io.emit('new_acts', getFloorPricesFromDump(collectionsForFloorPrice));
+            console.log(`--> Current listening Collections count ${collectionsForFloorPrice.length}`);
+            if (collectionsForFloorPrice.length > 0)
+                io.emit('new_acts', getFloorPricesFromDump(collectionsForFloorPrice));
         })
 
-        lastTime += 30;
+        lastTime += 20;
         listing = !listing;
     };
-    // newFetch();
-    // const interval = setInterval(newFetch, 30000);
+    newFetch();
+    const interval = setInterval(newFetch, 20000);
 }
 
 export const checkNewOffers = (listings: string[]) => {
