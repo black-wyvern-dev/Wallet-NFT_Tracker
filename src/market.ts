@@ -150,6 +150,27 @@ const getAllListingMagicEden = () => {
         });
     });
 };
+const checkMagicEdenFloorPrices = async (collections: string[]) => {
+    for (let i = 0; i < collections.length; i++) {
+        let name = collections[i];
+        const start_time = Math.floor(Date.now() / 1000);
+        const data: any = await getFloorPricesMagicEden([name]);
+        if (data.length == 0) {
+            console.log(`     ${i+1}: error all fetching for ${name} collection from MagicEden`);
+            continue;
+        }
+        const reply = loadDump(`/magiceden/floor_prices.json`);
+        let result = !reply ? {} : reply;
+        if (!result[data[0].collection] || result[data[0].collection].last_update_time < start_time)
+            result[data[0].collection] = {
+                price: data[0].price,
+                last_updated: start_time,
+            }
+        saveDump(`/magiceden/floor_prices.json`, result);
+        console.log(`     ${i+1}: all fetching ${data[0].price}: ${name} collection from MagicEden`);
+        await sleep(200);
+    }
+};
 
 const getNFTInfoFromMagicEden = (nft: string) => {
     return new Promise((resolve) => {
@@ -199,8 +220,9 @@ const getHistoryMagicEden = (collection: string) => {
     });
 }
 
-export const getFloorPrices = (collections: string[], io: Server) => {
+export const getFloorPrices = async (collections: string[], io: Server) => {
     updateCollectionsForFloorPrice(collections);
+    await checkMagicEdenFloorPrices(collections);
     setTimeout(() => {
         console.log(`--> Current Fetched FloorPrices Count ${Object.keys(floorPriceCache).length}`);
             io.emit('new_acts', getFloorPricesFromDump(collections));
@@ -288,8 +310,8 @@ export const attachCollectionFloorPriceListener = async (io: Server) => {
     
     await updateCollectionsInfoSolanart();
     
-    console.log('--> Start getting current NFTs from MagicEden');
-    await getAllListingMagicEden();
+    // console.log('--> Start getting current NFTs from MagicEden');
+    // await getAllListingMagicEden();
     
     const newFetch = async () => {
         if (!listing) {
