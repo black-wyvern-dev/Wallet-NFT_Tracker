@@ -65,8 +65,6 @@ export const updateCollectionsForFloorPrice = (collections: string[]) => {
     collectionsForFloorPrice = collections;
 }
 
-export const sleep = async (time: number) => {
-    new Promise((resolve, reject) => {
-        setTimeout(() => {resolve(1);}, time)
-    });
+export const sleep = (time: number) => {
+    return new Promise(resolve => setTimeout(resolve, time))
 }
