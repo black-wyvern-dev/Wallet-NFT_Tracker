@@ -151,18 +151,19 @@ const getAllListingMagicEden = () => {
     });
 };
 const checkMagicEdenFloorPrices = async (collections: string[]) => {
+    const reply = loadDump(`/magiceden/floor_prices.json`);
+    let result = !reply ? {} : reply;
     for (let i = 0; i < collections.length; i++) {
         let name = collections[i];
+        if (result[name]) continue;
         const start_time = Math.floor(Date.now() / 1000);
         const data: any = await getFloorPricesMagicEden([name]);
         if (data.length == 0) {
             console.log(`     ${i+1}: error all fetching for ${name} collection from MagicEden`);
             continue;
         }
-        const reply = loadDump(`/magiceden/floor_prices.json`);
-        let result = !reply ? {} : reply;
-        if (!result[data[0].collection] || result[data[0].collection].last_update_time < start_time)
-            result[data[0].collection] = {
+        if (result[name].last_update_time < start_time)
+            result[name] = {
                 price: data[0].price,
                 last_updated: start_time,
             }
@@ -220,16 +221,17 @@ const getHistoryMagicEden = (collection: string) => {
     });
 }
 
-export const getFloorPrices = async (collections: string[], io: Server) => {
-    updateCollectionsForFloorPrice(collections);
+export const getFloorPrices = async (marketplace: string, collections: string[]) => {
+    // updateCollectionsForFloorPrice(collections);
     await checkMagicEdenFloorPrices(collections);
-    setTimeout(() => {
-        console.log(`--> Current Fetched FloorPrices Count ${Object.keys(floorPriceCache).length}`);
-            io.emit('new_acts', getFloorPricesFromDump(collections));
-    }, 2000);
+    // setTimeout(() => {
+    //     console.log(`--> Current Fetched FloorPrices Count ${Object.keys(floorPriceCache).length}`);
+    //         io.emit('new_acts', getFloorPricesFromDump(collections));
+    // }, 2000);
+    return getFloorPricesFromDump(collections, marketplace);
 }
 
-const getFloorPricesFromDump = (collections: string[]) => {
+const getFloorPricesFromDump = (collections: string[], marketplace?: string) => {
     let solanartInfos = loadDump(`/solanart/floor_prices.json`);
     let magicedenInfos = loadDump(`/magiceden/floor_prices.json`);
     if (!solanartInfos) solanartInfos = {};
@@ -242,7 +244,7 @@ const getFloorPricesFromDump = (collections: string[]) => {
         } as any;
         return {
             collection,
-            ...floorPrice,
+            ...(!marketplace ? floorPrice : floorPrice[marketplace]),
         };
     })
 }

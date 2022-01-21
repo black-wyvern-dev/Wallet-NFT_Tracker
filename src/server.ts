@@ -49,16 +49,21 @@ app.get('/nft', async (req, res) => {
 });
 
 app.get('/get_floor_price', async (req, res) => {
+  const marketplace = (req.query.marketplace as string);
   const collections = (req.query.collections as string).split(',');
   console.log(`Request fetch floorPrices`);
+  console.log(marketplace);
   console.log(collections);
-  if (collections.length == 0) {
-    res.send([]);
+  if (!marketplace || marketplace != 'solanart' && marketplace != 'magiceden') {
+    res.send({err: "Don't support the marketplace atm"});
     return;
   }
-  getFloorPrices(collections, io);
-  res.writeHead(200, {'Content-Type': 'text/html'});
-  res.end(index);
+  if (collections.length == 0) {
+    res.send({results: []});
+    return;
+  }
+  const result = await getFloorPrices(marketplace, collections);//, io);
+  res.send({results: result});
 });
 
 app.get('/clear_all_attach', (req, res) => {
