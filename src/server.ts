@@ -54,7 +54,7 @@ app.get('/get_floor_price', async (req, res) => {
   console.log(`Request fetch floorPrices`);
   console.log(marketplace);
   console.log(collections);
-  if (!marketplace || marketplace != 'solanart' && marketplace != 'magiceden') {
+  if (!marketplace || marketplace != 'solanart' && marketplace != 'magiceden' && marketplace != 'digitaleyes' && marketplace != 'alpha') {
     res.send({err: "Don't support the marketplace atm"});
     return;
   }

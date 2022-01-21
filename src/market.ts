@@ -150,6 +150,7 @@ const getAllListingMagicEden = () => {
         });
     });
 };
+
 const checkMagicEdenFloorPrices = async (collections: string[]) => {
     const reply = loadDump(`/magiceden/floor_prices.json`);
     let result = !reply ? {} : reply;
@@ -221,9 +222,85 @@ const getHistoryMagicEden = (collection: string) => {
     });
 }
 
+const getFloorPricesAlpha = (collections: string[]) => {
+    return new Promise(async (resolve) => {
+        console.log(`--> Start Fetching floorPrices ${collections.length} collections from Alpha `, (new Date()).toLocaleString());
+        let subNames = [], results = {} as any, cnt = 1;
+        for (let i = 0; i < collections.length; i++) {
+            subNames.push(collections[i]);
+            if (i < collections.length - 1 && i % 100 < 99) {
+                continue;
+            }
+            // let name = collections[i];
+            await Promise.allSettled(
+                subNames.map(async (name: any) => {
+                    try {
+                        let start_time = (new Date()).toLocaleString();
+                        const ret: any = await axios.get(`https://apis.alpha.art/api/v1/collection/${name}`);
+                        if (!ret.data) {
+                            console.log(`     ${cnt++}: error fetching for ${name} collection from Alpha`);
+                            return;
+                        }console.log(ret.data.floorPrice / LAMPORTS_PER_SOL);
+                        results[name] = {
+                            price: ret.data.floorPrice / LAMPORTS_PER_SOL,
+                            last_updated: start_time,
+                        }
+                        console.log(`     ${cnt++}: fetching ${ret.data.floorPrice / LAMPORTS_PER_SOL}: ${name} collection from Alpha`);
+                    } catch (e) {
+                        console.log(`     ${cnt++}: error fetching for ${name} collection from Alpha`);
+                    };
+                })
+            );
+            subNames = [];
+            await sleep(200);
+        }
+        console.log('--> Fetched all NFTs from Alpha');
+        resolve(results);
+    });
+};
+
+const getFloorPricesDigitalEyes = (collections: string[]) => {
+    return new Promise(async (resolve) => {
+        console.log(`--> Start Fetching floorPrices ${collections.length} collections from DigitalEyes `, (new Date()).toLocaleString());
+        let subNames = [], results = {} as any, cnt = 1;
+        for (let i = 0; i < collections.length; i++) {
+            subNames.push(collections[i]);
+            if (i < collections.length - 1 && i % 100 < 99) {
+                continue;
+            }
+            // let name = collections[i];
+            await Promise.allSettled(
+                subNames.map(async (name: any) => {
+                    try {
+                        let start_time = (new Date()).toLocaleString();
+                        const ret: any = await axios.get(`https://us-central1-digitaleyes-prod.cloudfunctions.net/offers-retriever?collection=${name}`);
+                        if (!ret.data) {
+                            console.log(`     ${cnt++}: error fetching for ${name} collection from DigitalEyes`);
+                            return;
+                        }console.log(ret.data.price_floor / LAMPORTS_PER_SOL);
+                        results[name] = {
+                            price: ret.data.price_floor / LAMPORTS_PER_SOL,
+                            last_updated: start_time,
+                        }
+                        console.log(`     ${cnt++}: fetching ${ret.data.price_floor / LAMPORTS_PER_SOL}: ${name} collection from DigitalEyes`);
+                    } catch (e) {
+                        console.log(`     ${cnt++}: error fetching for ${name} collection from DigitalEyes`);
+                    };
+                })
+            );
+            subNames = [];
+            await sleep(200);
+        }
+        console.log('--> Fetched all NFTs from DigitalEyes');
+        resolve(results);
+    });
+};
+
 export const getFloorPrices = async (marketplace: string, collections: string[]) => {
+    if (marketplace == 'alpha') return await getFloorPricesAlpha(collections);
+    if (marketplace == 'digitaleyes') return await getFloorPricesDigitalEyes(collections);
     // updateCollectionsForFloorPrice(collections);
-    await checkMagicEdenFloorPrices(collections);
+    if (marketplace == 'magiceden') await checkMagicEdenFloorPrices(collections);
     // setTimeout(() => {
     //     console.log(`--> Current Fetched FloorPrices Count ${Object.keys(floorPriceCache).length}`);
     //         io.emit('new_acts', getFloorPricesFromDump(collections));
