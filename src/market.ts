@@ -163,11 +163,10 @@ const checkMagicEdenFloorPrices = async (collections: string[]) => {
             console.log(`     ${i+1}: error all fetching for ${name} collection from MagicEden`);
             continue;
         }
-        if (result[name].last_update_time < start_time)
-            result[name] = {
-                price: data[0].price,
-                last_updated: start_time,
-            }
+        result[name] = {
+            price: data[0].price,
+            last_updated: start_time,
+        }
         saveDump(`/magiceden/floor_prices.json`, result);
         console.log(`     ${i+1}: all fetching ${data[0].price}: ${name} collection from MagicEden`);
         await sleep(200);
