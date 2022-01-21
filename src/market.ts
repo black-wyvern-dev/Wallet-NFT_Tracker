@@ -776,7 +776,7 @@ export const attachMarketEventListener = async (nfts: string[], io: Server) => {
                     market: 'magiceden',
                 }
             });
-            newActs.push(...result.filter((res) => res.mint != 'unknown'));
+            newActs.push(...result.filter((res) => res.mint && res.mint != 'unknown'));
             console.log(`${result.length} new acts fetched from magiceden`);
         };
 
@@ -792,7 +792,8 @@ export const attachMarketEventListener = async (nfts: string[], io: Server) => {
                 if (trx?.meta?.err != null) return {ins: ''};
                 const ins_cnt = trx?.transaction.message.instructions.length as number;
                 const ins = trx?.transaction.message.instructions[ins_cnt - 1] as any;
-                if (ins.programId && ins.programId.toString() == MEMO_V2_PROGRAM_PUBKEY.toBase58()) {
+                if (!ins) return {ins: ''};
+                if (ins.programId.toString() == MEMO_V2_PROGRAM_PUBKEY.toBase58()) {
                     const info = JSON.parse(ins.parsed);
                     let mint = 'unknown';
                     for (const listing of isAttachingListener) {
@@ -833,7 +834,7 @@ export const attachMarketEventListener = async (nfts: string[], io: Server) => {
                     };    
                 }
             });
-            newActs.push(...result.filter((res) => res.mint != 'unknown'));
+            newActs.push(...result.filter((res) => res.mint && res.mint != 'unknown'));
             console.log(`${result.length} new acts fetched from solanart`);
         };
         await newSNTrack();
