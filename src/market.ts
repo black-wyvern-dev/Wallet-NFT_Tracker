@@ -432,8 +432,8 @@ export const attachCollectionFloorPriceListener = async (io: Server) => {
                 console.log('  -> Fetched updated floorPrices from Magiceden: ', (new Date()).toLocaleString());
             });
             console.log(`--> Current listening Collections count ${collectionsForFloorPrice.length}`);
-            if (collectionsForFloorPrice.length > 0)
-                io.emit('new_acts', getFloorPricesFromDump(collectionsForFloorPrice));
+            // if (collectionsForFloorPrice.length > 0)
+            //     io.emit('new_acts', getFloorPricesFromDump(collectionsForFloorPrice));
         })
 
         lastTime += 20;
@@ -792,7 +792,7 @@ export const attachMarketEventListener = async (nfts: string[], io: Server) => {
                 if (trx?.meta?.err != null) return {ins: ''};
                 const ins_cnt = trx?.transaction.message.instructions.length as number;
                 const ins = trx?.transaction.message.instructions[ins_cnt - 1] as any;
-                if (ins.programId.toString() == MEMO_V2_PROGRAM_PUBKEY.toBase58()) {
+                if (ins.programId && ins.programId.toString() == MEMO_V2_PROGRAM_PUBKEY.toBase58()) {
                     const info = JSON.parse(ins.parsed);
                     let mint = 'unknown';
                     for (const listing of isAttachingListener) {
