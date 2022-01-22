@@ -23,7 +23,7 @@ const io = new Server(server, {
 // Router - determine all nfts on the wallet and get full data
 app.get('/', async (req, res) => {
   try {
-    const address = req.query.address as string;//'9X3n2WPj8k7GB2wD7MxSxuL3VqC2e6YaafdcyPbr8xys';//
+    const address = req.query.address as string;
     let page = req.query.page as string;
     if (page == undefined || page == '') page = '0';
     console.log(`Requested wallet address ${address}`);
@@ -36,11 +36,11 @@ app.get('/', async (req, res) => {
   }
 });
 
-// Router - fetch full data for individual nft on the wallet
+// Router - fetch purchase data for individual nft on the wallet
 app.get('/nft', async (req, res) => {
   try {
-    const address = req.query.address as string;//'9X3n2WPj8k7GB2wD7MxSxuL3VqC2e6YaafdcyPbr8xys';
-    const mint = req.query.mint as string;//'HkaDezUF8eEHZRkDbMJGCCxNVuLuDfQ6ABpADahLw36M';
+    const address = req.query.address as string;
+    const mint = req.query.mint as string;
     console.log(`Requested wallet address ${address}, mint ${mint}`);
     const result = await fetchOnlyPurchaseInfo(address, mint);
     console.log(`Request is processed`);
@@ -51,6 +51,7 @@ app.get('/nft', async (req, res) => {
   }
 });
 
+// Get floor price for 4 market places: query - <marketplace>, <collections>=..., ...
 app.get('/get_floor_price', async (req, res) => {
   const marketplace = (req.query.marketplace as string);
   const collections = (req.query.collections as string).split(',');
@@ -65,7 +66,7 @@ app.get('/get_floor_price', async (req, res) => {
     res.send({results: []});
     return;
   }
-  const result = await getFloorPrices(marketplace, collections);//, io);
+  const result = await getFloorPrices(marketplace, collections);
   res.send({results: result});
 });
 
@@ -77,6 +78,7 @@ app.get('/clear_all_attach', (req, res) => {
   res.send('Cleared all');
 })
 
+// Set socket alert for new offers: query - <mint>
 app.get('/set_offer_alert', (req, res) => {
   const nfts = (req.query.mint as string).split(',');
   console.log(`Request offer listener attach`);
@@ -99,6 +101,7 @@ app.get('/set_offer_alert', (req, res) => {
   res.end(index);
 })
 
+// Set socket alert for new sales: query - <mint>
 app.get('/set_sale_alert', (req, res) => {
   const nfts = (req.query.mint as string).split(',');
   console.log(`Request sale listener attach`);
