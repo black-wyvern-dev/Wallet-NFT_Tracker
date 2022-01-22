@@ -3,8 +3,8 @@ import http from 'http';
 import cors from 'cors';
 import fs from 'fs';
 import { Server } from 'socket.io';
-import { fetchWalletForNFTs, getTransactionData } from './wallet';
-import { attachCollectionFloorPriceListener, checkNewSales, checkNewOffers, attachMarketEventListener, addNftListener, getFloorPrices} from './market';
+import { fetchOnlyPurchaseInfo, fetchWalletForNFTs } from './wallet';
+import { attachCollectionFloorPriceListener, attachMarketEventListener, addNftListener, getFloorPrices} from './market';
 import { isAttachingListener, setAttachingListener, updateCollectionsForFloorPrice } from './config/constant';
 
 const app = express();
@@ -24,8 +24,11 @@ const io = new Server(server, {
 app.get('/', async (req, res) => {
   try {
     const address = req.query.address as string;//'9X3n2WPj8k7GB2wD7MxSxuL3VqC2e6YaafdcyPbr8xys';//
+    let page = req.query.page as string;
+    if (page == undefined || page == '') page = '0';
     console.log(`Requested wallet address ${address}`);
-    const result = await fetchWalletForNFTs(address);
+    const result = await fetchWalletForNFTs(address, parseInt(page));
+    console.log(`--> Fetched ${result.nfts.length} nfts for ${address}: page ${page}`);
     res.send(`Requested wallet address ${address}<br><br>${JSON.stringify(result)}`);
   } catch (e) {
     console.log(`Request isn't process: ${e}`);
@@ -39,7 +42,7 @@ app.get('/nft', async (req, res) => {
     const address = req.query.address as string;//'9X3n2WPj8k7GB2wD7MxSxuL3VqC2e6YaafdcyPbr8xys';
     const mint = req.query.mint as string;//'HkaDezUF8eEHZRkDbMJGCCxNVuLuDfQ6ABpADahLw36M';
     console.log(`Requested wallet address ${address}, mint ${mint}`);
-    const result = await getTransactionData(address, mint);
+    const result = await fetchOnlyPurchaseInfo(address, mint);
     console.log(`Request is processed`);
     res.send(`Requested wallet address ${address} mint ${mint}<br>${JSON.stringify(result)}`);
   } catch (e) {

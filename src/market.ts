@@ -1,7 +1,18 @@
 import { Connection, LAMPORTS_PER_SOL, ParsedInnerInstruction, ParsedInstruction, PartiallyDecodedInstruction, PublicKey } from '@solana/web3.js';
 import axios from 'axios';
 import { Server } from 'socket.io';
-import { collectionsForFloorPrice, floorPriceCache, isAttachingListener, listingStatus, ListingStatus, MAGIC_EDEN_PROGRAM_PUBKEY, MEMO_V2_PROGRAM_PUBKEY, setAttachingListener, sleep, SOLANART_PROGRAM_PUBKEY, SOLANA_MAINNET, SOLANA_TRX_FEE, updateCollectionsForFloorPrice, updateFloorPriceCache, updatelistingStatus } from './config/constant';
+import {
+    collectionsForFloorPrice,
+    isAttachingListener,
+    MAGIC_EDEN_PROGRAM_PUBKEY,
+    MEMO_V2_PROGRAM_PUBKEY,
+    setAttachingListener,
+    sleep,
+    SOLANART_PROGRAM_PUBKEY,
+    SOLANA_MAINNET,
+    SOLANA_MAINNET_SERUM,
+    SOLANA_TRX_FEE,
+} from './config/constant';
 import { loadDump, saveDump } from './wallet';
 
 const getHistorySolanart = (collection: string) => {
@@ -699,7 +710,7 @@ export const addNftListener = async (nfts: string[], offer: boolean, sale: boole
 }
 
 export const attachMarketEventListener = async (nfts: string[], io: Server) => {
-    const connection = new Connection(SOLANA_MAINNET, "confirmed");
+    const connection = new Connection(SOLANA_MAINNET_SERUM, "confirmed");
     let me_related_sigs: any = [], sn_related_sigs: any = [], newActs = [] as any;
     
     await addNftListener(nfts, true, true);
