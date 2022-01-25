@@ -4,7 +4,7 @@ import cors from 'cors';
 import fs from 'fs';
 import { Server } from 'socket.io';
 import { fetchOnlyPurchaseInfo, fetchWalletForNFTs } from './wallet';
-import { attachCollectionFloorPriceListener, attachMarketEventListener, addNftListener, getFloorPrices} from './market';
+import { attachCollectionFloorPriceListener, attachMarketEventListener, addNftListener, getFloorPrices } from './market';
 import { isAttachingListener, setAttachingListener, updateCollectionsForFloorPrice } from './config/constant';
 
 const app = express();
@@ -59,15 +59,15 @@ app.get('/get_floor_price', async (req, res) => {
   console.log(marketplace);
   console.log(collections);
   if (!marketplace || marketplace != 'solanart' && marketplace != 'magiceden' && marketplace != 'digitaleyes' && marketplace != 'alpha') {
-    res.send({err: "Don't support the marketplace atm"});
+    res.send({ err: "Don't support the marketplace atm" });
     return;
   }
   if (collections.length == 0) {
-    res.send({results: []});
+    res.send({ results: [] });
     return;
   }
   const result = await getFloorPrices(marketplace, collections);
-  res.send({results: result});
+  res.send({ results: result });
 });
 
 app.get('/clear_all_attach', (req, res) => {
@@ -84,7 +84,7 @@ app.get('/set_offer_alert', (req, res) => {
   console.log(`Request offer listener attach`);
   console.log(nfts);
   if (nfts.length == 0) {
-    res.writeHead(200, {'Content-Type': 'text/html'});
+    res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(index);
     return;
   }
@@ -97,7 +97,7 @@ app.get('/set_offer_alert', (req, res) => {
   else {
     addNftListener(nfts, true, false);
   }
-  res.writeHead(200, {'Content-Type': 'text/html'});
+  res.writeHead(200, { 'Content-Type': 'text/html' });
   res.end(index);
 })
 
@@ -107,7 +107,7 @@ app.get('/set_sale_alert', (req, res) => {
   console.log(`Request sale listener attach`);
   console.log(nfts);
   if (nfts.length == 0) {
-    res.writeHead(200, {'Content-Type': 'text/html'});
+    res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(index);
     return;
   }
@@ -120,7 +120,7 @@ app.get('/set_sale_alert', (req, res) => {
   else {
     addNftListener(nfts, false, true);
   }
-  res.writeHead(200, {'Content-Type': 'text/html'});
+  res.writeHead(200, { 'Content-Type': 'text/html' });
   res.end(index);
 })
 
@@ -136,5 +136,5 @@ io.on('connection', async (socket) => {
 server.listen(port, () => {
   console.log(`server is listening on ${port}`);
   attachCollectionFloorPriceListener(io);
-  return ;
+  return;
 });

@@ -1,0 +1,563 @@
+[
+    {
+        "name": "Golem #1413",
+        "mintAddress": "A2LRHDo1ueuExiAxZaAwtwSVx4g13YQwbKEUdeSfpzBk",
+        "image": "https://www.arweave.net/QqKKX-TA35S1PwzVJR76wnhkKQBv7v7WSAHVDCVT6yQ?ext=png",
+        "updateAuthority": "DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp",
+        "identifier": "Rude Golems-DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp-",
+        "floorPrice": {
+            "identifier": "Rude Golems-DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp-",
+            "floorPrice": 3.99,
+            "source": "Solanart",
+            "usdValue": 0,
+            "mintAtFloor": "BPK322NJ618vkypY13jL2vBLTPMJoH3waZKw3uAyqhFV"
+        },
+        "attributes": [
+            {
+                "trait_type": "Background",
+                "value": "Green Pillars",
+                "floorPrice": 6
+            },
+            {
+                "trait_type": "Skin",
+                "value": "Emerald",
+                "floorPrice": 4.7
+            },
+            {
+                "trait_type": "Armor",
+                "value": "Silver Knight",
+                "floorPrice": 4.35
+            },
+            {
+                "trait_type": "Chain",
+                "value": "Boxing Gloves",
+                "floorPrice": 6
+            },
+            {
+                "trait_type": "Mouth",
+                "value": "Mustache",
+                "floorPrice": 7.5
+            },
+            {
+                "trait_type": "Eyes",
+                "value": "Neon Shades",
+                "floorPrice": 4.5
+            },
+            {
+                "trait_type": "Over Head",
+                "value": "Elder Mushroom Colony",
+                "floorPrice": 4.13
+            },
+            {
+                "trait_type": "Innate Virtue",
+                "value": "Unbreakable Defense",
+                "floorPrice": 3.99
+            }
+        ],
+        "highestTraitValue": {
+            "trait_type": "Mouth",
+            "value": "Mustache",
+            "floorPrice": 7.5
+        }
+    },
+    {
+        "name": "Golem #8562",
+        "mintAddress": "BAdJ3UJaEKtw7BbC4YSJTsAiXToEQyBWcR3i4AtWZfai",
+        "image": "https://www.arweave.net/Xezh_1zihVcD49hhpNGLOlO89rvwqHOtzOgV1q5wigM?ext=png",
+        "updateAuthority": "DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp",
+        "identifier": "Rude Golems-DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp-",
+        "floorPrice": {
+            "identifier": "Rude Golems-DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp-",
+            "floorPrice": 3.99,
+            "source": "Solanart",
+            "usdValue": 0,
+            "mintAtFloor": "BPK322NJ618vkypY13jL2vBLTPMJoH3waZKw3uAyqhFV"
+        },
+        "attributes": [
+            {
+                "trait_type": "Background",
+                "value": "Purple",
+                "floorPrice": 4
+            },
+            {
+                "trait_type": "Skin",
+                "value": "Grey Marble",
+                "floorPrice": 4.29
+            },
+            {
+                "trait_type": "Armor",
+                "value": "Unchained",
+                "floorPrice": 5.5
+            },
+            {
+                "trait_type": "Chain",
+                "value": "None",
+                "floorPrice": 3.99
+            },
+            {
+                "trait_type": "Mouth",
+                "value": "Human Teeth",
+                "floorPrice": 4.5
+            },
+            {
+                "trait_type": "Eyes",
+                "value": "Coins",
+                "floorPrice": 5
+            },
+            {
+                "trait_type": "Over Head",
+                "value": "Elder Mushroom Colony",
+                "floorPrice": 4.13
+            },
+            {
+                "trait_type": "Innate Virtue",
+                "value": "Annihilating Power",
+                "floorPrice": 4
+            }
+        ],
+        "highestTraitValue": {
+            "trait_type": "Armor",
+            "value": "Unchained",
+            "floorPrice": 5.5
+        }
+    },
+    {
+        "name": "Golem #1197",
+        "mintAddress": "AxeWCqj5vs2xHA2FHL6hNGBMGcgEy8f3d7W8zGje1eLC",
+        "image": "https://www.arweave.net/sEA2iCGpGl_2rc3y4VNaEaOahcl5fqUk7KLvU8vkmO4?ext=png",
+        "updateAuthority": "DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp",
+        "identifier": "Rude Golems-DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp-",
+        "floorPrice": {
+            "identifier": "Rude Golems-DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp-",
+            "floorPrice": 3.99,
+            "source": "Solanart",
+            "usdValue": 0,
+            "mintAtFloor": "BPK322NJ618vkypY13jL2vBLTPMJoH3waZKw3uAyqhFV"
+        },
+        "attributes": [
+            {
+                "trait_type": "Background",
+                "value": "Dangerous Laboratory",
+                "floorPrice": 4.13
+            },
+            {
+                "trait_type": "Skin",
+                "value": "Grey Marble",
+                "floorPrice": 4.29
+            },
+            {
+                "trait_type": "Armor",
+                "value": "None",
+                "floorPrice": 3.99
+            },
+            {
+                "trait_type": "Chain",
+                "value": "None",
+                "floorPrice": 3.99
+            },
+            {
+                "trait_type": "Mouth",
+                "value": "Pink Iced Out Grillz",
+                "floorPrice": 4.7
+            },
+            {
+                "trait_type": "Eyes",
+                "value": "Blue Force",
+                "floorPrice": 4.5
+            },
+            {
+                "trait_type": "Over Head",
+                "value": "None",
+                "floorPrice": 4.35
+            },
+            {
+                "trait_type": "Innate Virtue",
+                "value": "Supreme Intelligence",
+                "floorPrice": 4
+            }
+        ],
+        "highestTraitValue": {
+            "trait_type": "Mouth",
+            "value": "Pink Iced Out Grillz",
+            "floorPrice": 4.7
+        }
+    },
+    {
+        "name": "Solluminati #711",
+        "mintAddress": "3G2CFVBhCShcEy3QftrzPaA35p6LukdANM8HKe58R7xx",
+        "image": "https://www.arweave.net/1UIvJmG5V-Tg0YzpeXrndQs-dxDKmjY6GGVVVZA0CR8?ext=png",
+        "updateAuthority": "BkTZrmzzKBytAzmEUqJFyASgPqBLhwLyDJyxqm1EL3S9",
+        "identifier": "SOLLUMINATI-BkTZrmzzKBytAzmEUqJFyASgPqBLhwLyDJyxqm1EL3S9-SOLL",
+        "floorPrice": {
+            "identifier": "SOLLUMINATI-BkTZrmzzKBytAzmEUqJFyASgPqBLhwLyDJyxqm1EL3S9-SOLL",
+            "floorPrice": 2.02,
+            "source": "Magic Eden",
+            "usdValue": 0,
+            "mintAtFloor": "GHbxvfXVXc8Xwwf1XdgMZDFbcsZkBEbtQ3CEVzUrB9hx"
+        },
+        "attributes": [
+            {
+                "trait_type": "Background",
+                "value": "Pyramid",
+                "floorPrice": 2.02
+            },
+            {
+                "trait_type": "Race",
+                "value": "Reptilianus",
+                "floorPrice": 2.02
+            },
+            {
+                "trait_type": "Eyes",
+                "value": "Ice",
+                "floorPrice": 2.2
+            },
+            {
+                "trait_type": "Forehead Eye",
+                "value": "Sauron",
+                "floorPrice": 2.1
+            },
+            {
+                "trait_type": "Costume",
+                "value": "Astronaut",
+                "floorPrice": 3
+            },
+            {
+                "trait_type": "Mouth",
+                "value": "Wide Smile",
+                "floorPrice": 2.5
+            },
+            {
+                "trait_type": "Accessory",
+                "value": "None",
+                "floorPrice": 2.03
+            },
+            {
+                "trait_type": "Hand Item",
+                "value": "Robot Eye Golden",
+                "floorPrice": 2.35
+            },
+            {
+                "trait_type": "Faction",
+                "value": "Skull & Bones",
+                "floorPrice": 2.02
+            }
+        ],
+        "highestTraitValue": {
+            "trait_type": "Costume",
+            "value": "Astronaut",
+            "floorPrice": 3
+        }
+    },
+    {
+        "name": "Annihilating Power Orb",
+        "mintAddress": "C6vWjgtf5AHxvK3dpLymZsCvJBL9yLPGBBaCyW5BrZkx",
+        "image": "https://www.arweave.net/LhqPhLPKKYfMw8IoQdHUWmZT5Wi4Fg1sowbr9jz5Us0?ext=gif",
+        "updateAuthority": "DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp",
+        "identifier": "Power Orbs-DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp-",
+        "floorPrice": {
+            "identifier": "Power Orbs-DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp-",
+            "floorPrice": 1.14,
+            "source": "Magic Eden",
+            "usdValue": 0,
+            "mintAtFloor": "55KggJGqDoYizUj54QJfnW1fX3EDuKty1mqxRRm5yApr"
+        },
+        "attributes": [
+            {
+                "trait_type": "Type",
+                "value": "Annihilating Power",
+                "floorPrice": 1.14
+            }
+        ],
+        "highestTraitValue": {
+            "trait_type": "Type",
+            "value": "Annihilating Power",
+            "floorPrice": 1.14
+        }
+    },
+    {
+        "name": "Supreme Intelligence Orb",
+        "mintAddress": "8EUsvAuouS3TvF69poEv6N7f7C5h59j3Bp3Qjtx7sSUW",
+        "image": "https://www.arweave.net/GZkJIdCK5PbNwcXW6s20juadqqUYvdWfSvbLmtn6cYw?ext=gif",
+        "updateAuthority": "DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp",
+        "identifier": "Power Orbs-DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp-",
+        "floorPrice": {
+            "identifier": "Power Orbs-DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp-",
+            "floorPrice": 1.14,
+            "source": "Magic Eden",
+            "usdValue": 0,
+            "mintAtFloor": "55KggJGqDoYizUj54QJfnW1fX3EDuKty1mqxRRm5yApr"
+        },
+        "attributes": [
+            {
+                "trait_type": "Type",
+                "value": "Supreme Intelligence",
+                "floorPrice": 2.99
+            }
+        ],
+        "highestTraitValue": {
+            "trait_type": "Type",
+            "value": "Supreme Intelligence",
+            "floorPrice": 2.99
+        }
+    },
+    {
+        "name": "Unbreakable Defense Orb",
+        "mintAddress": "6agjg5M8TubxvetameDMAYtmpY9BaaCthY3Bw9CdfQf4",
+        "image": "https://www.arweave.net/zXRrO8ubNnub133_BUy-bxGjEFmlaHrRGcfCB85bicU?ext=gif",
+        "updateAuthority": "DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp",
+        "identifier": "Power Orbs-DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp-",
+        "floorPrice": {
+            "identifier": "Power Orbs-DKbzXS7D5CW5yVxhhjP1bYvAfmKokeeUW3roEP6enuZp-",
+            "floorPrice": 1.14,
+            "source": "Magic Eden",
+            "usdValue": 0,
+            "mintAtFloor": "55KggJGqDoYizUj54QJfnW1fX3EDuKty1mqxRRm5yApr"
+        },
+        "attributes": [
+            {
+                "trait_type": "Type",
+                "value": "Unbreakable Defense",
+                "floorPrice": 3.5
+            }
+        ],
+        "highestTraitValue": {
+            "trait_type": "Type",
+            "value": "Unbreakable Defense",
+            "floorPrice": 3.5
+        }
+    },
+    {
+        "name": "Pixel Racers #6006",
+        "mintAddress": "AiS9sAe9zzQ6YfRY6VQF75P7rMUVU2r88zoJvpEAeaCm",
+        "image": "https://www.arweave.net/iOo8PKt_HpLnb57i7V3gqYzyXMye1n6-uMVwWsONRrg",
+        "updateAuthority": "2DKEWhzzkpcMQaRdGU8ccptsLhVP94Z6XXkSuvQV5QcC",
+        "identifier": "Pixel Racers-2DKEWhzzkpcMQaRdGU8ccptsLhVP94Z6XXkSuvQV5QcC-PXR",
+        "floorPrice": {
+            "identifier": "Pixel Racers-2DKEWhzzkpcMQaRdGU8ccptsLhVP94Z6XXkSuvQV5QcC-PXR",
+            "floorPrice": 0.08,
+            "source": "Magic Eden",
+            "usdValue": 0,
+            "mintAtFloor": "7F51Q24R2DmZ8tBFJEDZ9ZpqdS9Tw3s1Wye5VL3F7hDJ"
+        },
+        "attributes": [
+            {
+                "trait_type": "Background",
+                "value": "Plain White",
+                "floorPrice": 0.09
+            },
+            {
+                "trait_type": "Body Type",
+                "value": "Sedan",
+                "floorPrice": 0.09
+            },
+            {
+                "trait_type": "Body Color",
+                "value": "Green",
+                "floorPrice": 0.09
+            },
+            {
+                "trait_type": "Body Stripe",
+                "value": "White",
+                "floorPrice": 0.11
+            },
+            {
+                "trait_type": "Window Color",
+                "value": "Black",
+                "floorPrice": 0.08
+            },
+            {
+                "trait_type": "Wheel Type",
+                "value": "Dot",
+                "floorPrice": 0.09
+            },
+            {
+                "trait_type": "Wheel Color",
+                "value": "Orange",
+                "floorPrice": 0.09
+            },
+            {
+                "trait_type": "Trail",
+                "value": "Purple",
+                "floorPrice": 0.09
+            }
+        ],
+        "highestTraitValue": {
+            "trait_type": "Body Stripe",
+            "value": "White",
+            "floorPrice": 0.11
+        }
+    },
+    {
+        "name": "SGB #3143",
+        "mintAddress": "3b2bzZGbmKyd7yjetXM38ptw3Qbv3LhC1qRGSZE49cz9",
+        "image": "https://www.arweave.net/EogRVbOv2xytEfrX1w2gGkzjrde2m_1RN2ytoiCZwNw?ext=png",
+        "updateAuthority": "24cM9YoYxsmAtsJmngAvk7sNJwT7T59M1ofkv2jjbiWC",
+        "identifier": "Solana Gecko Business-24cM9YoYxsmAtsJmngAvk7sNJwT7T59M1ofkv2jjbiWC-SGB",
+        "floorPrice": {
+            "identifier": "Solana Gecko Business-24cM9YoYxsmAtsJmngAvk7sNJwT7T59M1ofkv2jjbiWC-SGB",
+            "floorPrice": 0.04,
+            "source": "Magic Eden",
+            "usdValue": 0,
+            "mintAtFloor": "52SdkERgS4NJeSFAvEyD7z2HFQrNKzYZo5VQDYbWivdX"
+        },
+        "attributes": [
+            {
+                "trait_type": "Background",
+                "value": "Yellow Background",
+                "floorPrice": 0.06
+            },
+            {
+                "trait_type": "Skin",
+                "value": "Orange Skin",
+                "floorPrice": 0.04
+            },
+            {
+                "trait_type": "Clothes",
+                "value": "Black Smoking",
+                "floorPrice": 0.1
+            },
+            {
+                "trait_type": "Earring",
+                "value": "Diamond Earring",
+                "floorPrice": 0.1
+            },
+            {
+                "trait_type": "Mouth",
+                "value": "Empty Mouth",
+                "floorPrice": 0.04
+            },
+            {
+                "trait_type": "Eyes",
+                "value": "Cool Glasses",
+                "floorPrice": 0.27
+            },
+            {
+                "trait_type": "Hat",
+                "value": "Blue Punk Hair",
+                "floorPrice": 0.09
+            }
+        ],
+        "highestTraitValue": {
+            "trait_type": "Eyes",
+            "value": "Cool Glasses",
+            "floorPrice": 0.27
+        }
+    },
+    {
+        "name": "Pixel Racers Engine #13234",
+        "mintAddress": "5R5MkQdQ58SQt6g4dGo3yS5bHHq9qBSRoamSxsCUjFhE",
+        "image": "https://www.arweave.net/HyI29V-t8QbXVzA0pS-aevkfOOPCucAnvFAdZ8xWXIs",
+        "updateAuthority": "engioQb5PycxnQZTmU7umXj67JGBx9fVAhaKYJKw5Ab",
+        "identifier": null,
+        "floorPrice": {
+            "identifier": null,
+            "floorPrice": 0,
+            "source": null,
+            "usdValue": 0,
+            "mintAtFloor": null
+        },
+        "attributes": [
+            {
+                "trait_type": "Acceleration",
+                "value": "Level 2",
+                "floorPrice": 0
+            },
+            {
+                "trait_type": "Top Speed",
+                "value": "Level 3",
+                "floorPrice": 0
+            },
+            {
+                "trait_type": "Handling",
+                "value": "Level 7",
+                "floorPrice": 0
+            },
+            {
+                "trait_type": "Zone 1",
+                "value": "Level 1",
+                "floorPrice": 0
+            },
+            {
+                "trait_type": "Zone 2",
+                "value": "Level 1",
+                "floorPrice": 0
+            },
+            {
+                "trait_type": "Zone 3",
+                "value": "Level 1",
+                "floorPrice": 0
+            }
+        ],
+        "highestTraitValue": {
+            "trait_type": "Acceleration",
+            "value": "Level 2",
+            "floorPrice": 0
+        }
+    },
+    {
+        "name": "Brawler Ticket v2 #616",
+        "mintAddress": "7Tm2ENJxHUCJPWrwGSnmj3zStY7JKWbrdLz6GmJ28gcE",
+        "image": "https://www.arweave.net/haNZRYI_py7Nv4bzppgKfCMyJvapeMV076UJDVhcUzc?ext=png",
+        "updateAuthority": "4jrM8jUJhYkS9ZAub51PxNxyMRUVy9pwKsM3iujPAsEb",
+        "identifier": null,
+        "floorPrice": {
+            "identifier": null,
+            "floorPrice": 0,
+            "source": null,
+            "usdValue": 0,
+            "mintAtFloor": null
+        },
+        "attributes": [],
+        "highestTraitValue": {
+            "trait_type": null,
+            "value": null,
+            "floorPrice": 0
+        }
+    },
+    {
+        "name": "Brawler #341",
+        "mintAddress": "2XpAmEHJChcWzDJjUrvaVp91xTAcwoi3Ro47u2hkLoiY",
+        "image": "https://www.arweave.net/3wt_kWu8y_1y9c5nLVJ3QN_438UygEMib6VoAxGoqw4?ext=png",
+        "updateAuthority": "4jrM8jUJhYkS9ZAub51PxNxyMRUVy9pwKsM3iujPAsEb",
+        "identifier": null,
+        "floorPrice": {
+            "identifier": null,
+            "floorPrice": 0,
+            "source": null,
+            "usdValue": 0,
+            "mintAtFloor": null
+        },
+        "attributes": [
+            {
+                "trait_type": "Armor",
+                "value": "Kingdom Ruler Green",
+                "floorPrice": 0
+            },
+            {
+                "trait_type": "Head",
+                "value": "Anti Dynasty Green",
+                "floorPrice": 0
+            },
+            {
+                "trait_type": "Weapon",
+                "value": "Ritual Guard",
+                "floorPrice": 0
+            },
+            {
+                "trait_type": "Region",
+                "value": "Dynasty",
+                "floorPrice": 0
+            },
+            {
+                "trait_type": "Rarity",
+                "value": "Common",
+                "floorPrice": 0
+            }
+        ],
+        "highestTraitValue": {
+            "trait_type": "Armor",
+            "value": "Kingdom Ruler Green",
+            "floorPrice": 0
+        }
+    }
+]
