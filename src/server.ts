@@ -8,7 +8,7 @@ import { attachCollectionFloorPriceListener, attachMarketEventListener, addNftLi
 import { isAttachingListener, setAttachingListener, updateCollectionsForFloorPrice } from './config/constant';
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 const index = fs.readFileSync(__dirname + '\\..\\public\\test.html');
 
 app.use(cors());
@@ -44,7 +44,7 @@ app.get('/nft', async (req, res) => {
     console.log(`Requested wallet address ${address}, mint ${mint}`);
     const result = await fetchOnlyPurchaseInfo(address, mint);
     console.log(`Request is processed`);
-    res.send(`Requested wallet address ${address} mint ${mint}<br>${JSON.stringify(result)}`);
+    res.send(`${JSON.stringify(result)}`);
   } catch (e) {
     console.log(`Request isn't process: ${e}`);
     res.send(e);
