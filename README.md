@@ -4,7 +4,7 @@
 - Webhook for scraping secondary marketplace information for particular NFT collection & marketplace name
 - API for scraping NFT sale price and date for particular wallet.
 - Web Socket for grabing floor price of certain NFT collections.
-
+- Introduced Figment Data Hub to enhance the speed.
 `yarn`
 `yarn start`
 
