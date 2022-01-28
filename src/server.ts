@@ -3,12 +3,13 @@ import http from 'http';
 import cors from 'cors';
 import fs from 'fs';
 import { Server } from 'socket.io';
-import { fetchOnlyPurchaseInfo, fetchWalletForNFTs } from './wallet';
-import { attachCollectionFloorPriceListener, attachMarketEventListener, addNftListener, getFloorPrices } from './market';
+import { fetchWalletForNFTs,getTransactionData, fetchOnlyPurchaseInfo, fetchWalletallForNFTs } from './wallet';
+import { attachCollectionFloorPriceListener, checkNewSales, checkNewOffers, attachMarketEventListener, addNftListener, getFloorPrices } from './market';
 import { isAttachingListener, setAttachingListener, updateCollectionsForFloorPrice } from './config/constant';
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 3000;
+// const index = fs.readFileSync('/home/solana-wallet-nft-track/public/test.html');
 const index = fs.readFileSync(__dirname + '\\..\\public\\test.html');
 
 app.use(cors());
@@ -23,35 +24,44 @@ const io = new Server(server, {
 // Router - determine all nfts on the wallet and get full data
 app.get('/', async (req, res) => {
   try {
-    const address = req.query.address as string;
-    let page = req.query.page as string;
-    if (page == undefined || page == '') page = '0';
+    const address = req.query.address as string;//'9X3n2WPj8k7GB2wD7MxSxuL3VqC2e6YaafdcyPbr8xys';//
     console.log(`Requested wallet address ${address}`);
-    const result = await fetchWalletForNFTs(address, parseInt(page));
-    console.log(`--> Fetched ${result.nfts.length} nfts for ${address}: page ${page}`);
-    res.send(`Requested wallet address ${address}<br><br>${JSON.stringify(result)}`);
+    const result = await fetchWalletForNFTs(address);
+    res.send(JSON.stringify(result));
   } catch (e) {
     console.log(`Request isn't process: ${e}`);
     res.send(e);
   }
 });
 
-// Router - fetch purchase data for individual nft on the wallet
+app.get('/alldata', async (req, res) => {
+  try {
+    const address = req.query.address as string;//'9X3n2WPj8k7GB2wD7MxSxuL3VqC2e6YaafdcyPbr8xys';//
+    console.log(`Requested wallet address ${address}`);
+    const result = await fetchWalletallForNFTs(address);
+    res.send(JSON.stringify(result));
+  } catch (e) {
+    console.log(`Request isn't process: ${e}`);
+    res.send(e);
+  }
+});
+
+// Router - fetch full data for individual nft on the wallet
 app.get('/nft', async (req, res) => {
   try {
-    const address = req.query.address as string;
-    const mint = req.query.mint as string;
+    const address = req.query.address as string;//'9X3n2WPj8k7GB2wD7MxSxuL3VqC2e6YaafdcyPbr8xys';
+    const mint = req.query.mint as string;//'HkaDezUF8eEHZRkDbMJGCCxNVuLuDfQ6ABpADahLw36M';
     console.log(`Requested wallet address ${address}, mint ${mint}`);
+    // const result = await getTransactionData(address, mint);
     const result = await fetchOnlyPurchaseInfo(address, mint);
     console.log(`Request is processed`);
-    res.send(`${JSON.stringify(result)}`);
+    res.send(result);
   } catch (e) {
     console.log(`Request isn't process: ${e}`);
     res.send(e);
   }
 });
 
-// Get floor price for 4 market places: query - <marketplace>, <collections>=..., ...
 app.get('/get_floor_price', async (req, res) => {
   const marketplace = (req.query.marketplace as string);
   const collections = (req.query.collections as string).split(',');
@@ -66,7 +76,7 @@ app.get('/get_floor_price', async (req, res) => {
     res.send({ results: [] });
     return;
   }
-  const result = await getFloorPrices(marketplace, collections);
+  const result = await getFloorPrices(marketplace, collections);//, io);
   res.send({ results: result });
 });
 
@@ -78,7 +88,6 @@ app.get('/clear_all_attach', (req, res) => {
   res.send('Cleared all');
 })
 
-// Set socket alert for new offers: query - <mint>
 app.get('/set_offer_alert', (req, res) => {
   const nfts = (req.query.mint as string).split(',');
   console.log(`Request offer listener attach`);
@@ -101,7 +110,6 @@ app.get('/set_offer_alert', (req, res) => {
   res.end(index);
 })
 
-// Set socket alert for new sales: query - <mint>
 app.get('/set_sale_alert', (req, res) => {
   const nfts = (req.query.mint as string).split(',');
   console.log(`Request sale listener attach`);
