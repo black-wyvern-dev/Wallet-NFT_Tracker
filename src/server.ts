@@ -3,12 +3,12 @@ import http from 'http';
 import cors from 'cors';
 import fs from 'fs';
 import { Server } from 'socket.io';
-import { fetchWalletForNFTs,getTransactionData, fetchOnlyPurchaseInfo, fetchWalletallForNFTs } from './wallet';
+import { fetchWalletForNFTs,getTransactionData, fetchOnlyPurchaseInfo, fetchWalletallForNFTs, fetchNftList, fetchNftsDetailInfo, getNftPurchaseInfo } from './wallet';
 import { attachCollectionFloorPriceListener, checkNewSales, checkNewOffers, attachMarketEventListener, addNftListener, getFloorPrices } from './market';
 import { isAttachingListener, setAttachingListener, updateCollectionsForFloorPrice } from './config/constant';
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 // const index = fs.readFileSync('/home/solana-wallet-nft-track/public/test.html');
 const index = fs.readFileSync(__dirname + '\\..\\public\\test.html');
 
@@ -61,6 +61,55 @@ app.get('/nft', async (req, res) => {
     res.send(e);
   }
 });
+
+app.get('/nft_detail', async (req, res) => {
+  try {
+    const address = req.query.address as string;
+    let page = req.query.page as string;
+    let count = req.query.count as string;
+    if (page == undefined || page == '') page = '0';
+    if (count == undefined || count == '') count = '10';
+    console.log(`Requested wallet address ${address}`);
+    const result = await fetchNftsDetailInfo(address, parseInt(page), parseInt(count));
+    console.log(`Request is processed`);
+    res.send(result);
+  } catch (e) {
+    console.log(`Request isn't process: ${e}`);
+    res.send(e);
+  }
+});
+
+app.get('/nft_list', async (req, res) => {
+  try {
+    const address = req.query.address as string;
+    console.log(`Requested wallet address ${address}`);
+    var starttime = Date.now();
+    const result = await fetchNftList(address);
+    console.log('--------------------------------------process duration : ', (Date.now()-starttime)/1000)
+    console.log(`Request is processed`);
+    res.send(result);
+  } catch (e) {
+    console.log(`Request isn't process: ${e}`);
+    res.send(e);
+  }
+});
+
+app.get('/nft_purchase_info', async (req, res) => {
+  try {
+    const address = req.query.address as string;
+    const mint = req.query.mint as string;
+    if (address == undefined || address == '') res.send('address undefined');
+    if (mint == undefined || mint == '') res.send('address undefined');
+    console.log(`Requested wallet address ${address}`);
+    const result = await getNftPurchaseInfo(address, mint);
+    console.log(`Request is processed`);
+    res.send(result);
+  } catch (e) {
+    console.log(`Request isn't process: ${e}`);
+    res.send(e);
+  }
+});
+
 
 app.get('/get_floor_price', async (req, res) => {
   const marketplace = (req.query.marketplace as string);

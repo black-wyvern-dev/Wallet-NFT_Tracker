@@ -20,7 +20,7 @@
     "@nfteyez/sol-rayz": "^0.7.2",
     "@solana/spl-token": "^0.1.8",
     "@solana/web3.js": "^1.30.2",
-    "axios": "^0.24.0",
+    "axios": "^0.25.0",
     "bn.js": "^5.2.0",
     "body-parser": "^1.19.0",
     "commander": "^8.3.0",

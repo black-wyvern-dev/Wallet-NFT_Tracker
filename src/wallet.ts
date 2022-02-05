@@ -238,13 +238,15 @@ export async function getTransactionData(address: string, mint: string | undefin
 
 
 export const fetchOnlyPurchaseInfo = async (address: string, mint: string) => {
-  var connection = new Connection(SOLANA_MAINNET, "confirmed");
+  var connection = new Connection("https://solana--mainnet.datahub.figment.io/apikey/ba11960d832a6415baeb2ae7e5f6acd3", "confirmed");
 
   const nftAccounts = await getParsedNftAccountsByOwner({ publicAddress: new PublicKey(address), connection: connection });
 
   const walletTokenAccounts = await connection.getParsedTokenAccountsByOwner(new PublicKey(address), { programId: TOKEN_PROGRAM_ID });
   var holderAccountTemp = [];
   var holderAccount: any[] = [];
+  //
+  var starttime = Date.now();
 
   for (let i = 0; i < walletTokenAccounts.value.length; i++) {
     for (let j = 0; j < nftAccounts.length; j++) {
@@ -263,6 +265,8 @@ export const fetchOnlyPurchaseInfo = async (address: string, mint: string) => {
       }
     }
   }
+  console.log('+++++++++++++++++++++++++++++push into temp array duration : ', (Date.now() - starttime) / 1000);
+  starttime = Date.now();
 
   await Promise.allSettled(
     holderAccountTemp.map(async (holder) => {
@@ -282,17 +286,24 @@ export const fetchOnlyPurchaseInfo = async (address: string, mint: string) => {
     })
   );
 
+  //
+  console.log('+++++++++++++++++++++++++++++fetch nft info from AR- duration : ', (Date.now() - starttime) / 1000);
+  starttime = Date.now();
   var globalSignLength = [];
   var globalSigns = [];
   var purchaseInfo = [];
   for (let i = 0; i < holderAccount.length; i++) {
-
+// let starttime = Date.now();
     let sigs = await connection.getSignaturesForAddress(new PublicKey(holderAccount[i].account), { limit: 10 });
+    // console.log('------------------------------------------//////////////////// fetch singatures duration :', (Date.now()-starttime)/1000)
     globalSignLength.push(sigs.length);
     for (let j = 0; j < sigs.length; j++) {
       globalSigns.push(sigs[j].signature);
     }
   }
+  //
+  console.log('+++++++++++++++++++++++++++++get signatures info duration : ', (Date.now() - starttime) / 1000);
+  starttime = Date.now();
 
   connection = new Connection('https://solana--mainnet.datahub.figment.io/apikey/ba11960d832a6415baeb2ae7e5f6acd3', "confirmed");
 
@@ -305,6 +316,11 @@ export const fetchOnlyPurchaseInfo = async (address: string, mint: string) => {
     console.log('second null transaction occoured');
     testtxs = await connection.getParsedConfirmedTransactions(globalSigns, 'confirmed');
   }
+
+
+  //
+  console.log('+++++++++++++++++++++++++++++get transactions info duration : ', (Date.now() - starttime) / 1000);
+  starttime = Date.now();
 
   var stackedTxsLength = 0;
   for (let i = 0; i < globalSignLength.length; i++) {
@@ -384,6 +400,10 @@ export const fetchOnlyPurchaseInfo = async (address: string, mint: string) => {
     });
 
   }
+
+  console.log('+++++++++++++++++++++++++++++process transactions info duration : ', (Date.now() - starttime) / 1000);
+  starttime = Date.now();
+
   console.log('', purchaseInfo.length);
 
   return (purchaseInfo);
@@ -664,4 +684,297 @@ export function getDumpPath(
     default:
       return path.join(cPath, dumpType);
   }
+}
+
+
+/**
+ * Returns list of nfts of the wallet
+ * 
+ * @param address address of wallet to see
+ * @returns array of nft infos that a specific wallet has
+ */
+ export const fetchNftList = async (address: string) => {
+  var connection = new Connection("https://solana--mainnet.datahub.figment.io/apikey/ba11960d832a6415baeb2ae7e5f6acd3", "confirmed");
+
+  const nftAccounts = await getParsedNftAccountsByOwner({ publicAddress: new PublicKey(address), connection: connection });
+
+  const walletTokenAccounts = await connection.getParsedTokenAccountsByOwner(new PublicKey(address), { programId: TOKEN_PROGRAM_ID });
+  var holderAccountTemp = [];
+  var holderAccount: any[] = [];
+  var nftAccountsSorted = nftAccounts.sort((nft_a, nft_b) => { return nft_a.mint > nft_b.mint ? 1 : -1 });
+
+  for (let j = 0; j < nftAccountsSorted.length; j++) {
+    for (let i = 0; i < walletTokenAccounts.value.length; i++) {
+      if (walletTokenAccounts.value[i].account.data.parsed.info.mint === nftAccountsSorted[j].mint) {
+
+        // let new_arr = await get_nft_api_rec(nftAccounts[j].data.uri, nftAccounts[j])
+        holderAccountTemp.push({
+          // ...new_arr,
+          mint: nftAccountsSorted[j].mint,
+          account: walletTokenAccounts.value[i].pubkey.toBase58(),
+          // nftname: nftAccounts[j].data.name,
+          nftsymbol: nftAccountsSorted[j].data.symbol,
+          nfturi: nftAccountsSorted[j].data.uri,
+        });
+        break;
+      }
+    }
+  }
+  // return (holderAccountTemp);
+  // console.log(nftAccounts);
+  await Promise.allSettled(
+    holderAccountTemp.map(async (holder) => {
+      try {
+        let res = await get_nft_api_rec(holder.nfturi, holder.mint);
+        holderAccount.push({
+          ...res,
+          account: holder.account,
+          // nftname: nftAccounts[j].data.name,
+          // nftsymbol: holder.nftsymbol,
+          // nfturi: holder.nfturi,
+        });
+
+      } catch (e) {
+        console.log(`   error occured ${e}`);
+      };
+    })
+  );
+  var holderAccountsSorted = holderAccount.sort((nft_a, nft_b) => { return nft_a.mint > nft_b.mint ? 1 : -1 });
+  return (holderAccountsSorted);
+}
+
+export const fetchNftsDetailInfo = async (address: string, page: number, count: number) => {
+  var connection = new Connection("https://solana--mainnet.datahub.figment.io/apikey/ba11960d832a6415baeb2ae7e5f6acd3", "confirmed");
+  
+  const nftAccounts = await getParsedNftAccountsByOwner({ publicAddress: new PublicKey(address), connection: connection });
+
+  //
+  if (nftAccounts.length < page * count) return ([]);
+
+  let start = page * count, end: number | undefined = (page + 1) * count;
+  if (end > nftAccounts.length) end = undefined;
+  const walletTokenAccounts = await connection.getParsedTokenAccountsByOwner(new PublicKey(address), { programId: TOKEN_PROGRAM_ID });
+
+  let holderAccountTemp = [];
+  var nftAccountsPaged = nftAccounts.sort((nft_a, nft_b) => { return nft_a.mint > nft_b.mint ? 1 : -1 }).slice(start, end);
+
+  for (let j = 0; j < nftAccountsPaged.length; j++) {
+    for (let i = 0; i < walletTokenAccounts.value.length; i++) {
+      if (walletTokenAccounts.value[i].account.data.parsed.info.mint === nftAccountsPaged[j].mint) {
+
+        holderAccountTemp.push({
+          mint: nftAccountsPaged[j].mint,
+          account: walletTokenAccounts.value[i].pubkey.toBase58(),
+        });
+        break;
+      }
+    }
+  }
+  // return (holderAccountTemp);
+  
+  var globalSignLength = [];
+  var globalSigns = [];
+  var purchaseInfo = [];
+  for (let i = 0; i < holderAccountTemp.length; i++) {
+
+    let sigs = await connection.getSignaturesForAddress(new PublicKey(holderAccountTemp[i].account), { limit: 10 });
+    globalSignLength.push(sigs.length);
+    for (let j = 0; j < sigs.length; j++) {
+      globalSigns.push(sigs[j].signature);
+    }
+  }
+  //
+
+  // connection = new Connection('https://solana--mainnet.datahub.figment.io/apikey/ba11960d832a6415baeb2ae7e5f6acd3', "confirmed");
+
+  let testtxs = await connection.getParsedConfirmedTransactions(globalSigns, 'confirmed');
+  if (testtxs.length > 0 && testtxs[0] === null) {
+    console.log('null transaction occoured. retry...');
+    testtxs = await connection.getParsedConfirmedTransactions(globalSigns, 'confirmed');
+  }
+  if (testtxs.length > 0 && testtxs[0] === null) {
+    console.log('second null transaction occoured');
+    testtxs = await connection.getParsedConfirmedTransactions(globalSigns, 'confirmed');
+  }
+
+
+  //
+
+  var stackedTxsLength = 0;
+  for (let i = 0; i < globalSignLength.length; i++) {
+
+    var price = 0;
+    var market = '';
+    var time = '';
+    if (i > 0) stackedTxsLength += globalSignLength[i - 1];
+    for (let j = 0; j < globalSignLength[i]; j++) {
+
+      const trx = testtxs[stackedTxsLength + j];
+      var signer = trx?.transaction.message.accountKeys[0].pubkey.toBase58();
+      if (signer != address) continue;
+      if (!trx?.meta) continue;
+
+      let prebalance = trx?.meta?.preBalances[0] as number;
+      let postBalances = trx?.meta?.postBalances[0] as number;
+
+      if ((prebalance - postBalances - SOLANA_TRX_FEE) / LAMPORTS_PER_SOL < 0.005) continue;
+      else price = (prebalance - postBalances - SOLANA_TRX_FEE) / LAMPORTS_PER_SOL;
+      time = (new Date((trx.blockTime ?? 0) * 1000)).toLocaleString();
+
+
+      var instructionlength = trx?.transaction.message.instructions.length as number;
+      for (let k = 0; k < instructionlength; k++) {
+        market = '';
+
+        const parsedInstruction = trx?.transaction.message.instructions[k] as PartiallyDecodedInstruction;
+        if (!parsedInstruction || !parsedInstruction.data) break;
+
+        const program = parsedInstruction.programId.toBase58();
+
+        //
+        if (program == SOLANART_PROGRAM_PUBKEY.toBase58() && parsedInstruction.data.indexOf('54') == 0) {
+          console.log(`--> Solanart NFT Sale - ${price} : ${time}`);
+          market = 'solanart';
+          break;
+        } else if (program == MAGIC_EDEN_PROGRAM_PUBKEY.toBase58() && parsedInstruction.data.indexOf('3UjL') == 0) {
+          console.log(`--> MagicEden NFT Sale - ${price} : ${time}`);
+          market = 'magiceden';
+          break;
+        } else if (program == DIGITALEYES_PROGRAM_PUBKEY.toBase58() && parsedInstruction.data.indexOf('jz') == 0) {
+          console.log(`--> DigitalEye NFT Sale - ${price} : ${time}`);
+          market = 'digitaleye';
+          break;
+        } else if (program == DIGITALEYES_DIRECTSELL_PROGRAM_PUBKEY.toBase58() && parsedInstruction.data.indexOf('xc') == 0) {
+          console.log(`--> DigitalEye NFT Direct Sale - ${price} : ${time}`);
+          market = 'digitaleye';
+        } else if (program == EXCHANGE_PROGRAM_PUBKEY.toBase58() && parsedInstruction.data.indexOf('jzD') == 0) {
+          console.log(`--> ExchangeArt NFT Sale - ${price} : ${time}`);
+          market = 'exchange';
+        } else if (program == SOLSEA_PROGRAM_PUBKEY.toBase58() && parseInt(parsedInstruction.data, 16) > 234) {
+          console.log(`--> Solsea NFT Sale - ${price} : ${time}`);
+          market = 'solsea';
+        } else {
+          continue;
+        }
+      }
+    }
+    purchaseInfo.push({
+      mint: holderAccountTemp[i].mint,
+      price: price == 0 ? '' : price,
+      time: time == '' ? '' : time,
+      market: market != '' ? market : '',
+    });
+  }
+  console.log('', purchaseInfo.length);
+  return (purchaseInfo);
+}
+
+export const getNftPurchaseInfo = async (address:string, mint:string) => {
+  const connection = new Connection("https://solana--mainnet.datahub.figment.io/apikey/ba11960d832a6415baeb2ae7e5f6acd3", "confirmed");
+  
+  const nftAccounts = await getParsedNftAccountsByOwner({ publicAddress: new PublicKey(address), connection: connection });
+  const walletTokenAccounts = await connection.getParsedTokenAccountsByOwner(new PublicKey(address), { programId: TOKEN_PROGRAM_ID });
+ 
+ var nftInfo:any=[];
+    for (let i = 0; i < walletTokenAccounts.value.length; i++) {
+      if (walletTokenAccounts.value[i].account.data.parsed.info.mint === mint) {
+
+        // let new_arr = await get_nft_api_rec(nftAccounts[j].data.uri, nftAccounts[j])
+        nftInfo.push({
+          mint: mint,
+          account: walletTokenAccounts.value[i].pubkey.toBase58(),
+        });
+        break;
+      }
+    }
+
+  var globalSigns = [];
+
+    let sigs = await connection.getSignaturesForAddress(new PublicKey(nftInfo[0].account), { limit: 10 });
+    for (let j = 0; j < sigs.length; j++) {
+      globalSigns.push(sigs[j].signature);
+    }
+  //
+
+  // connection = new Connection('https://solana--mainnet.datahub.figment.io/apikey/ba11960d832a6415baeb2ae7e5f6acd3', "confirmed");
+
+  let testtxs = await connection.getParsedConfirmedTransactions(globalSigns, 'confirmed');
+  if (testtxs.length > 0 && testtxs[0] === null) {
+    console.log('null transaction occoured. retry...');
+    testtxs = await connection.getParsedConfirmedTransactions(globalSigns, 'confirmed');
+  }
+  if (testtxs.length > 0 && testtxs[0] === null) {
+    console.log('second null transaction occoured');
+    testtxs = await connection.getParsedConfirmedTransactions(globalSigns, 'confirmed');
+  }
+
+
+  var stackedTxsLength = 0;
+
+    var price = 0;
+    var market = '';
+    var time = '';
+    for(let i=0;i<testtxs.length;i++){
+      const trx = testtxs[i];
+      var signer = trx?.transaction.message.accountKeys[0].pubkey.toBase58();
+      if (signer != address) continue;
+      if (!trx?.meta) continue;
+      let prebalance = trx?.meta?.preBalances[0] as number;
+      let postBalances = trx?.meta?.postBalances[0] as number;
+
+      if ((prebalance - postBalances - SOLANA_TRX_FEE) / LAMPORTS_PER_SOL < 0.005) continue;
+      else price = (prebalance - postBalances - SOLANA_TRX_FEE) / LAMPORTS_PER_SOL;
+      time = (new Date((trx.blockTime ?? 0) * 1000)).toLocaleString();
+
+
+      var instructionlength = trx?.transaction.message.instructions.length as number;
+      for (let k = 0; k < instructionlength; k++) {
+        market = '';
+
+        const parsedInstruction = trx?.transaction.message.instructions[k] as PartiallyDecodedInstruction;
+        if (!parsedInstruction || !parsedInstruction.data) break;
+
+        const program = parsedInstruction.programId.toBase58();
+
+        //
+        if (program == SOLANART_PROGRAM_PUBKEY.toBase58() && parsedInstruction.data.indexOf('54') == 0) {
+          console.log(`--> Solanart NFT Sale - ${price} : ${time}`);
+          market = 'solanart';
+          break;
+        } else if (program == MAGIC_EDEN_PROGRAM_PUBKEY.toBase58() && parsedInstruction.data.indexOf('3UjL') == 0) {
+          console.log(`--> MagicEden NFT Sale - ${price} : ${time}`);
+          market = 'magiceden';
+          break;
+        } else if (program == DIGITALEYES_PROGRAM_PUBKEY.toBase58() && parsedInstruction.data.indexOf('jz') == 0) {
+          console.log(`--> DigitalEye NFT Sale - ${price} : ${time}`);
+          market = 'digitaleye';
+          break;
+        } else if (program == DIGITALEYES_DIRECTSELL_PROGRAM_PUBKEY.toBase58() && parsedInstruction.data.indexOf('xc') == 0) {
+          console.log(`--> DigitalEye NFT Direct Sale - ${price} : ${time}`);
+          market = 'digitaleye';
+        } else if (program == EXCHANGE_PROGRAM_PUBKEY.toBase58() && parsedInstruction.data.indexOf('jzD') == 0) {
+          console.log(`--> ExchangeArt NFT Sale - ${price} : ${time}`);
+          market = 'exchange';
+        } else if (program == SOLSEA_PROGRAM_PUBKEY.toBase58() && parseInt(parsedInstruction.data, 16) > 234) {
+          console.log(`--> Solsea NFT Sale - ${price} : ${time}`);
+          market = 'solsea';
+        } else {
+          continue;
+        }
+      }
+
+
+    }
+    
+  return ({
+    mint: mint,
+    price: price == 0 ? '' : price,
+    time: time == '' ? '' : time,
+    market: market != '' ? market : '',
+  });
+
+  console.log('++++++++++++++++++++++');
+  console.log(walletTokenAccounts);
+  console.log('++++++++++++++++++++++');
+  return'';
 }

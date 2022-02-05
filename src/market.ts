@@ -47,7 +47,15 @@ const getCollectionInfoMagicEden = (last_time: number, listing: boolean) => {
                 // $skip: 0,
                 // $limit: 30,
             })));
-            axios.get(`https://api-mainnet.magiceden.io/rpc/getGlobalActivitiesByQuery?q=${query}`).then((res) => res.data)
+            
+            //
+            console.log('magic eden api query : ', `https://api-mainnet.magiceden.io/rpc/getGlobalActivitiesByQuery?q=${query}`);
+
+
+            await axios.get(`https://api-mainnet.magiceden.io/rpc/getGlobalActivitiesByQuery?q=${query}`, {headers: {"Access-Control-Allow-Origin": "*"}}
+    
+            )
+            .then((res) => res.data)
                 .then((res) => {
                     resolve(res.results.map((result: any) => {
                         return {
@@ -60,7 +68,12 @@ const getCollectionInfoMagicEden = (last_time: number, listing: boolean) => {
                             blockTime: result.blockTime,
                         }
                     }));
-                }).catch(() => resolve([]));
+                })
+                .catch((err) => {
+                    console.log('magiceden api error occured');
+                    // console.log(err);
+                    resolve([]);
+                });
         } catch (e) {
             console.log('--> Error fetching new Listing from MagicEden ', (new Date(last_time * 1000)).toLocaleString());
             resolve([]);
@@ -95,11 +108,12 @@ const getFloorPricesMagicEden = async (collections?: string[]) => {
         await Promise.allSettled(
             collections.map(async (name: any) => {
                 try {
-                    const ret: any = await axios.get(`https://api-mainnet.magiceden.io/rpc/getCollectionEscrowStats/${name}`);
+                    // const ret: any = await axios.get(`https://api-mainnet.magiceden.io/rpc/getCollectionEscrowStats/${name}`);
+                    const ret: any = await axios.get(`https://api-mainnet.magiceden.dev/v2/collections/${name}/stats`);
                     // console.log(`   ${cnt++}: FloorPrice ${ret.data.results.floorPrice / LAMPORTS_PER_SOL} ${name} from Magiceden`);
                     result.push({
                         collection: name,
-                        price: ret.data.results.floorPrice / LAMPORTS_PER_SOL,
+                        price: ret.data.floorPrice / LAMPORTS_PER_SOL,
                     })
                     cnt++;
                 } catch (e) {
@@ -234,7 +248,7 @@ const getFloorPricesAlpha = (collections: string[]) => {
             await Promise.allSettled(
                 subNames.map(async (name: any) => {
                     try {
-                        let start_time = (new Date()).toLocaleString();
+                        let start_time = (new Date()).toLocaleString().split(', ')[1]+', '+(new Date()).toLocaleString().split(', ')[0];
                         const ret: any = await axios.get(`https://apis.alpha.art/api/v1/collection/${name}`);
                         if (!ret.data) {
                             console.log(`     ${cnt++}: error fetching for ${name} collection from Alpha`);
@@ -271,7 +285,7 @@ const getFloorPricesDigitalEyes = (collections: string[]) => {
             await Promise.allSettled(
                 subNames.map(async (name: any) => {
                     try {
-                        let start_time = (new Date()).toLocaleString();
+                        let start_time = (new Date()).toLocaleString().split(', ')[1] + ', '+(new Date()).toLocaleString().split(', ')[0];
                         const ret: any = await axios.get(`https://us-central1-digitaleyes-prod.cloudfunctions.net/offers-retriever?collection=${name}`);
                         if (!ret.data || !ret.data.price_floor) {
                             console.log(`     ${cnt++}: error fetching for ${name} collection from DigitalEyes`);
@@ -294,7 +308,11 @@ const getFloorPricesDigitalEyes = (collections: string[]) => {
         resolve(results);
     });
 };
-
+const getFloorPricesMagicEdenInline = (collections: string[]):any => {
+    return async ()=> {
+        return await getFloorPricesMagicEden(collections);
+    }
+}
 export const getFloorPrices = async (marketplace: string, collections: string[]) => {
     if (marketplace == 'alpha') return await getFloorPricesAlpha(collections);
     if (marketplace == 'digitaleyes') return await getFloorPricesDigitalEyes(collections);
@@ -304,6 +322,28 @@ export const getFloorPrices = async (marketplace: string, collections: string[])
     //     console.log(`--> Current Fetched FloorPrices Count ${Object.keys(floorPriceCache).length}`);
     //         io.emit('new_acts', getFloorPricesFromDump(collections));
     // }, 2000);
+    
+    if(marketplace == 'magiceden') {
+        let result: {
+            [collection: string]: {
+                price: number,
+                last_updated: string
+            }
+        } = {};
+        for (const collection of collections) {
+            var data:any =await getFloorPricesMagicEden([collection]);
+
+            if (data.length == 0) {
+                console.log(`     error all fetching for ${collection} collection from MagicEden`);
+                continue;
+            }
+            result[collection] = !marketplace ? data[0].price : (data[0].price) ? {
+                price: data[0].price,
+                last_updated: (new Date()).toLocaleString().split(', ')[1] +', '+(new Date()).toLocaleString().split(', ')[0] ,
+            } : undefined;
+        }
+        return result;
+    }
     return getFloorPricesFromDump(collections, marketplace);
 }
 
@@ -319,16 +359,34 @@ const getFloorPricesFromDump = (collections: string[], marketplace?: string) => 
             last_updated: string
         }
     } = {};
-    for (const collection of collections) {
-        let floorPrice = {
-            magiceden: magicedenInfos[collection] ? { price: magicedenInfos[collection].price, updated_time: (new Date(magicedenInfos[collection].last_updated * 1000)).toLocaleString() } : undefined,
-            solanart: solanartInfos[collection] ? { price: solanartInfos[collection].price, updated_time: (new Date(solanartInfos[collection].last_updated * 1000)).toLocaleString() } : undefined,
-        } as any;
-        result[collection] = !marketplace ? floorPrice : (floorPrice[marketplace]) ? {
-            price: floorPrice[marketplace].price,
-            last_updated: floorPrice[marketplace].updated_time,
-        } : undefined;
-    }
+    console.log('+++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+    console.log()
+    console.log('+++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+    
+    
+
+        for (const collection of collections) {
+            let floorPrice = {
+                magiceden: magicedenInfos[collection] ? {
+                    price: magicedenInfos[collection].price, 
+                    updated_time: (new Date(magicedenInfos[collection].last_updated * 1000)).toLocaleString().split(', ')[1]+', '+(new Date(magicedenInfos[collection].last_updated * 1000)).toLocaleString().split(', ')[0]
+                } : undefined,
+                solanart: solanartInfos[collection] ? { 
+                    price: solanartInfos[collection].price, 
+                    updated_time: (new Date(solanartInfos[collection].last_updated * 1000)).toLocaleString().split(', ')[1] +', '+(new Date(solanartInfos[collection].last_updated * 1000)).toLocaleString().split(', ')[0] 
+                } : undefined,
+            } as any;
+            // if(marketplace === 'magiceden') {
+                
+            // } else {
+                result[collection] = !marketplace ? floorPrice : (floorPrice[marketplace]) ? {
+                    price: floorPrice[marketplace].price,
+                    last_updated: floorPrice[marketplace].updated_time,
+                } : undefined;
+            // }
+           
+        }
+    
     return result;
 }
 
